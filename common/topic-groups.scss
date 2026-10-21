@@ -1,0 +1,65 @@
+.wx-new-topic-modal {
+  --wx-topic-green: #07c160;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  .d-modal__container { width: min(520px, calc(100vw - 32px)); border-radius: 16px; background: #f7f7f7; }
+  .d-modal__header { padding: 20px 22px 14px; border-bottom: 0; }
+  .d-modal__title { color: #191919; font-size: 19px; font-weight: 600; }
+  .d-modal__body { padding: 2px 22px 12px; }
+  .d-modal__footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 0; padding: 12px 22px 20px; }
+  .wx-topic-fields { display: flex; flex-direction: column; gap: 10px; }
+  .wx-topic-fields > label { margin: 10px 0 0; color: #343434; font-size: 14px; font-weight: 500; }
+  .wx-topic-fields > label span { color: #949494; font-weight: 400; }
+  .wx-topic-title-input, .wx-topic-body-input {
+    box-sizing: border-box; width: 100%; margin: 0; padding: 12px 13px; border: 1px solid #e5e5e5; border-radius: 8px;
+    background: #fff; color: #191919; font: inherit; font-size: 16px; line-height: 1.5; box-shadow: none;
+    &::placeholder { color: #aaa; }
+    &:focus { border-color: #7ed7a8; outline: 2px solid #07c16022; }
+    &:disabled { opacity: .65; }
+  }
+  .wx-topic-body-input { min-height: 118px; max-height: 35vh; resize: vertical; }
+  .wx-topic-images { display: flex; flex-wrap: wrap; gap: 10px; }
+  .wx-topic-image, .wx-topic-uploading { position: relative; width: 76px; height: 76px; border-radius: 7px; background: #eaeaea; }
+  .wx-topic-image img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+  .wx-topic-image button, .wx-topic-uploading button { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 25px; height: 25px; border: 0; border-radius: 50%; background: #555e; color: white; font-size: 19px; cursor: pointer; }
+  .wx-topic-uploading { display: flex; flex-direction: column; justify-content: center; gap: 6px; box-sizing: border-box; padding: 9px; color: #777; font-size: 12px; text-align: center; }
+  .wx-topic-uploading span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wx-topic-add-image { align-self: flex-start; display: flex; align-items: center; gap: 5px; min-height: 42px; padding: 4px 2px; border: 0; background: transparent; color: #168b4f; font-size: 14px; cursor: pointer; }
+  .wx-topic-add-image span { font-size: 22px; }
+  .wx-topic-add-image:disabled { opacity: .45; cursor: default; }
+  .wx-topic-file-input { display: none; }
+  .wx-topic-draft-note { margin: 9px 0 0; color: #999; font-size: 12px; }
+  .wx-topic-state, .wx-topic-error, .wx-topic-notice { margin: 8px 0 12px; padding: 11px 12px; border-radius: 7px; font-size: 14px; line-height: 1.6; }
+  .wx-topic-state { color: #888; }
+  .wx-topic-error { color: #b34839; background: #fff0ed; }
+  .wx-topic-notice { color: #167347; background: #e7f5ed; }
+  .wx-topic-cancel, .wx-topic-create { min-height: 42px; padding: 10px 20px; border-radius: 7px; border: 0; font-size: 15px; }
+  .wx-topic-cancel { background: #e9e9e9; color: #666; }
+  .wx-topic-create { background: var(--wx-topic-green); color: white; }
+  .wx-topic-create:not(:disabled):hover { background: #06ad56; }
+  .wx-topic-create:disabled { opacity: .45; }
+  button:focus-visible { outline: 2px solid #078b46; outline-offset: 2px; }
+}
+
+@media (max-width: 767px) {
+  .wx-new-topic-modal {
+    .d-modal__container { width: 100%; max-width: none; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92dvh; }
+    .d-modal__header { padding: 19px 18px 10px; }
+    .d-modal__body { padding: 2px 18px 12px; }
+    .d-modal__footer { padding: 12px 18px max(16px, env(safe-area-inset-bottom)); }
+    .wx-topic-create { flex: 1; }
+    .wx-topic-title-input, .wx-topic-body-input { font-size: 16px; }
+  }
+}
+
+// The public experience is organized around conversations. Categories remain a
+// backend permission/storage choice; do not remove staff moderation controls.
+body.wx-forum:not(.staff) {
+  #create-topic, .topic-drafts-menu-trigger { display: none !important; }
+  &.wx-topic {
+    .topic-category,
+    #topic-title .discourse-tags,
+    #topic-title .topic-header-extra .list-tags,
+    .topic-navigation .discourse-tags { display: none !important; }
+  }
+}

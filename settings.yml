@@ -1,0 +1,20 @@
+community_name:
+  default: ""
+  description: "社区名称；留空使用站点名称。"
+featured_tag_path:
+  default: "/tag/精华"
+  description: "精选话题标签的站内路径，例如 /tag/精华 或 /tag/featured/1；用户无需选择标签。"
+welcome_title:
+  default: "一起聊聊感兴趣的话题"
+  description: "桌面空白会话区的欢迎标题。"
+welcome_description:
+  default: "选一个感兴趣的话题，加入讨论"
+  description: "桌面空白会话区的欢迎说明。"
+footer_text:
+  default: ""
+  description: "话题列表底部文字；留空使用社区名称。"
+default_topic_category_id:
+  type: integer
+  default: 0
+  min: 0
+  description: "后台存放话题的公开分类 ID；0 使用站点默认发帖分类。创建时仍检查当前用户权限，前台不显示分类选择。"

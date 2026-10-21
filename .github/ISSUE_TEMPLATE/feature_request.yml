@@ -1,0 +1,35 @@
+name: 体验改进
+description: 提出一个具体的使用场景与改进目标
+title: "[Feature] "
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 用户在做什么
+      description: 描述具体场景和目前遇到的障碍，不必先指定技术方案。
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 希望得到的体验
+      description: 说明操作步骤如何减少或结果如何更清晰。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 如何验收
+      description: 写出可观察的行为，并说明手机、电脑或微信内置浏览器的要求。
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: 数据、权限与范围
+      description: 是否需要真实排行榜、评论加精、认证或其他服务端能力？不确定也可以直接说明。
+  - type: textarea
+    id: references
+    attributes:
+      label: 参考与替代方案
+      description: 可提供公开链接或使用虚构资料的示意图；请勿上传第三方专有代码或真实用户资料。

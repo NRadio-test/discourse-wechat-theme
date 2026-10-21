@@ -1,0 +1,478 @@
+// Internal account IDs remain in links and permissions, not beside real names.
+body:not(.staff) .topic-map__private-message-map { display: none; }
+body:not(.staff) .alert-emails-disabled { display: none; }
+#user-card .names:has(> .names__primary.full-name) > .names__secondary.username,
+.user-main .user-profile-names:has(> .user-profile-names__primary.full-name) > .user-profile-names__secondary.username {
+  display: none;
+}
+
+// Embed the reusable DockedComposer. The Discourse stream keeps its normal
+// document scrolling; only the dock follows the mobile visual viewport.
+body.wx-forum.wx-topic {
+  --wx-dock-height: 68px;
+  --wx-keyboard-offset: 0px;
+
+  .wx-reply-dock {
+    bottom: var(--wx-keyboard-offset, 0px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-height: 64px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #f7f7f7;
+    border-top: 1px solid #dedede;
+    box-shadow: 0 -1px 0 rgb(255 255 255 / 65%);
+  }
+
+  .wx-inline-composer {
+    width: auto;
+    min-width: 0;
+  }
+
+  .wx-chat-heading > button {
+    pointer-events: auto;
+    flex: 0 0 40px;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: #555;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .wx-topic-menu {
+    position: absolute;
+    top: 52px;
+    right: 0;
+    display: grid;
+    min-width: 140px;
+    padding: 6px;
+    border: 1px solid #e4e4e4;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgb(0 0 0 / 10%);
+    pointer-events: auto;
+
+    a, button {
+      display: block;
+      margin: 0;
+      padding: 10px 14px;
+      min-height: 42px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #333;
+      text-align: left;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      &:hover { background: #f4f4f4; }
+    }
+  }
+
+  .wx-send-notice {
+    margin: 0 0 8px;
+    color: #477b57;
+    font-size: 13px;
+  }
+
+  .is-sending :is(.d-editor-button-bar, .docked-composer__uploads) {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .wx-reply-dock .docked-composer {
+    --docked-composer-input-min-height: 44px;
+    --docked-composer-auto-resize-max-height: 140px;
+    position: static;
+    z-index: auto;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    gap: 8px;
+    background: transparent;
+
+    &::before { display: none; }
+    .docked-composer__resize-handle { display: none; }
+    .docked-composer__header:empty { display: none; }
+    .docked-composer__inner { gap: 0; }
+    .docked-composer__editor { contain: inline-size; }
+    .d-editor-container { min-height: 44px; }
+
+    .d-editor-textarea-column {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      gap: 8px;
+      min-width: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      outline: none;
+      box-shadow: none;
+
+      &:focus-within { border: 0; outline: none; box-shadow: none; }
+    }
+
+    .d-editor-textarea-wrapper {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 76px;
+      align-items: end;
+      gap: 8px;
+      flex: 1;
+      order: 1;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .d-editor-button-bar__wrap {
+      grid-area: 1 / 2;
+      align-self: end;
+      width: 76px;
+      height: 44px;
+      margin: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .d-editor-button-bar {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 0;
+      height: 44px;
+      min-height: 44px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      overflow: visible;
+
+      > :not(.emoji):not(.docked-composer-upload) { display: none; }
+
+      > .emoji,
+      > .docked-composer-upload {
+        display: grid;
+        flex: 0 0 38px;
+        place-items: center;
+        box-sizing: border-box;
+        width: 38px;
+        min-width: 38px;
+        height: 44px;
+        margin: 0;
+        padding: 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #555;
+
+        .d-icon { width: 22px; height: 22px; color: #555; }
+        &:hover { background: #eaeaea; }
+      }
+
+      > .emoji { order: 1; }
+      > .docked-composer-upload { order: 2; }
+    }
+
+    .d-editor-button-bar__scroll-btn { display: none; }
+
+    .d-editor-input {
+      grid-area: 1 / 1;
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      max-height: 140px; // Five 24px lines, including vertical padding.
+      margin: 0;
+      padding: 10px 12px;
+      resize: none;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      outline: none;
+      box-shadow: none;
+      background: #fff;
+      color: #191919;
+      caret-color: #07a451;
+      font: inherit;
+      font-size: 16px; // Prevent iOS from zooming the input when focused.
+      line-height: 24px;
+      -webkit-appearance: none;
+
+      &::placeholder { color: #999; }
+      &:focus { border-color: #c5e7d3; box-shadow: none; }
+      &:disabled { background: #f0f0f0; color: #888; }
+    }
+
+    .ProseMirror-container {
+      grid-area: 1 / 1;
+      min-width: 0;
+      min-height: 44px;
+      max-height: 140px;
+      border-radius: 6px;
+      background: #fff;
+      overflow-y: auto;
+
+      .ProseMirror.d-editor-input { min-height: 44px; max-height: none; }
+      .ProseMirror p { margin: 0; }
+    }
+
+    .d-editor-preview-wrapper { display: none; }
+  }
+
+  .wx-send {
+    position: static;
+    order: 2;
+    flex: 0 0 auto;
+    min-width: 58px;
+    min-height: 42px;
+    margin: 0 0 1px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 5px;
+    background: #07b75b !important;
+    color: #fff !important;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 22px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { background: #06a853 !important; }
+    &:active:not(:disabled) { background: #079b4d !important; }
+    &:disabled { background: #e7e7e7 !important; color: #ababab !important; cursor: default; }
+  }
+
+  .wx-attach,
+  .wx-attach button {
+    display: grid;
+    flex: 0 0 42px;
+    place-items: center;
+    width: 42px;
+    height: 44px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #555;
+    font-size: 29px;
+    line-height: 1;
+    cursor: pointer;
+
+    .d-icon { width: 26px; height: 26px; }
+    &:hover { background: #eaeaea; }
+    &[aria-expanded="true"] { color: #07974c; background: #e4f2e9; }
+    &:disabled { color: #bbb; cursor: default; }
+  }
+
+  .wx-reply-context {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin: 0 0 8px;
+    padding: 2px 2px 2px 10px;
+    border-left: 3px solid #c6d7ca;
+    color: #777;
+    font-size: 12px;
+    line-height: 19px;
+
+    > :first-child:not(button) {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    strong { font-weight: 500; color: #5e725f; }
+    button {
+      display: grid;
+      flex: 0 0 32px;
+      place-items: center;
+      width: 32px;
+      min-height: 30px;
+      margin-left: auto;
+      padding: 0;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #777;
+      font-size: 20px;
+      cursor: pointer;
+    }
+  }
+
+  .wx-attachments,
+  .wx-reply-dock .docked-composer__uploads {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    max-height: 110px;
+    margin: 0 0 9px;
+    padding: 3px 1px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+
+    &:empty { display: none; }
+
+    .wx-attachment,
+    .docked-composer__upload {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex: 0 0 auto;
+      max-width: 220px;
+      min-height: 60px;
+      padding: 5px 30px 5px 5px;
+      box-sizing: border-box;
+      border: 1px solid #e1e1e1;
+      border-radius: 6px;
+      background: #fff;
+      color: #777;
+      font-size: 12px;
+
+      img { display: block; width: 60px; height: 60px; border-radius: 4px; object-fit: cover; }
+      span { overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+      button {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 29px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        border-radius: 0 5px 0 5px;
+        background: #f0f0f0;
+        color: #666;
+        font-size: 19px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .wx-send-error {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    background: #fff1ef;
+    color: #a64337;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+
+    &:empty { display: none; }
+  }
+
+  .wx-chat-tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(66px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    padding: 12px 2px 2px;
+    border-top: 1px solid #e5e5e5;
+
+    > button,
+    > a,
+    > label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-sizing: border-box;
+      min-width: 0;
+      min-height: 65px;
+      padding: 9px 6px;
+      border: 0;
+      border-radius: 8px;
+      background: #fff;
+      color: #626262;
+      font: inherit;
+      font-size: 12px;
+      line-height: 1.4;
+      text-align: center;
+      cursor: pointer;
+
+      .d-icon { width: 22px; height: 22px; color: #4b4b4b; }
+      &:hover { background: #ececec; }
+      &:disabled { opacity: 0.45; cursor: default; }
+    }
+
+    input[type="file"] { display: none; }
+  }
+
+  :is(.wx-send, .wx-attach, .wx-attach button, .wx-chat-tools > button,
+      .wx-chat-tools > a, .wx-reply-context button, .wx-attachment button,
+      .docked-composer-upload, .insert-composer-emoji):focus-visible {
+    outline: 2px solid #07974c;
+    outline-offset: 2px;
+  }
+
+  .container.posts {
+    padding-bottom: calc(var(--wx-dock-height, 68px) + 20px);
+  }
+
+  // Topic actions for staff remain available. Post actions (like, reply,
+  // report, edit and the overflow menu) are deliberately left intact.
+  &:not(.staff) {
+    #topic-footer-buttons { display: none; }
+    .topic-map__stats { display: none; }
+    .topic-map:has(.topic-map__contents):not(:has(.topic-map__private-message-map)) {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+  }
+
+  .topic-post[data-post-number="1"] {
+    margin-bottom: 22px;
+
+    > article.boxed { padding: 14px; border-radius: 7px; }
+    .cooked {
+      font-size: 15px;
+      line-height: 1.65;
+      p { margin-bottom: 0.65em; }
+      h1, h2 { font-size: 1.2em; line-height: 1.5; margin: 1em 0 0.5em; }
+      h3, h4 { font-size: 1.05em; line-height: 1.5; margin: 0.9em 0 0.45em; }
+      ul, ol { margin-top: 0.5em; margin-bottom: 0.7em; }
+      > :first-child { margin-top: 0; }
+      > :last-child { margin-bottom: 0; }
+    }
+  }
+}
+
+@media (min-width: 900px) {
+  body.wx-forum.wx-topic {
+    .wx-reply-dock { left: var(--wx-sidebar-width, 320px); padding-left: 22px; padding-right: 22px; }
+    .wx-chat-tools { grid-template-columns: repeat(4, minmax(70px, 100px)); justify-content: start; }
+  }
+}
+
+@media (max-width: 924px) {
+  body.wx-forum.wx-topic {
+    .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
+      bottom: calc(var(--wx-dock-height, 68px) + var(--wx-keyboard-offset, 0px) + 8px);
+    }
+  }
+}
+
+@media (max-width: 599px) {
+  body.wx-forum.wx-topic {
+    .wx-reply-dock { padding-left: 10px; padding-right: 10px; }
+    .wx-reply-dock .docked-composer .d-editor-textarea-column { gap: 7px; }
+    .wx-attach, .wx-attach button { flex-basis: 36px; width: 36px; }
+    .wx-send { min-width: 56px; padding-left: 12px; padding-right: 12px; }
+    .topic-post[data-post-number="1"] > article.boxed { padding: 12px; }
+    .topic-post .post-controls button { min-height: 36px; }
+  }
+}

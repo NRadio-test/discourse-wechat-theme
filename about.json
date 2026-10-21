@@ -1,0 +1,8 @@
+{
+  "name": "微信式话题群",
+  "component": true,
+  "authors": "NRadio-test contributors",
+  "about_url": "https://github.com/NRadio-test/discourse-wechat-theme",
+  "license_url": "",
+  "theme_version": "1.2.0"
+}

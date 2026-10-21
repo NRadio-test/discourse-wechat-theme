@@ -1,0 +1,1292 @@
+/* A familiar conversation shell. All selectors are limited to forum routes. */
+body.wx-forum {
+  --wx-green: #07c160;
+  --wx-ink: #191919;
+  --wx-muted: #8b8b8b;
+  --wx-panel: #f7f7f7;
+  --wx-line: #e4e4e4;
+  --wx-sidebar-width: 320px;
+  --wx-header-height: 56px;
+  --wx-reply-dock-height: 64px;
+  --d-sidebar-width: 0px;
+  background: #ededed;
+  color: var(--wx-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  .d-header-wrap { height: var(--wx-header-height); }
+  .d-header { height: var(--wx-header-height); background: #f7f7f7; box-shadow: none; border-bottom: 1px solid var(--wx-line); }
+  .d-header .wrap { max-width: none; padding: 0 20px; }
+  .d-header #site-logo { max-height: 31px; width: auto; }
+  .d-header .btn.login-button { border: 0; box-shadow: none; background: transparent; color: #191919; font-size: 16px; padding: 10px 8px; min-width: 44px; }
+  .d-header .login-button .d-icon, .header-dropdown-toggle.search-dropdown, .header-dropdown-toggle.hamburger-dropdown { display: none; }
+  .d-header .header-buttons { margin-left: 0; }
+  .d-header .header-dropdown-toggle.current-user img { border-radius: 7px; }
+  .sidebar-wrapper, .sidebar-section-wrapper, .powered-by-discourse { display: none; }
+  .d-header .btn-sidebar-toggle { display: none; }
+  #main-outlet-wrapper { display: block; max-width: none; margin: 0; padding: 0; }
+  #main-outlet { max-width: none; padding: 0; margin: 0; }
+  .wx-conversations { background: #fafafa; }
+  .wx-list-heading { display: flex; align-items: center; justify-content: space-between; font-size: 18px; font-weight: 600; padding: 12px 18px 0; }
+  .wx-icon-button { border: 0; background: transparent; color: #777; min-width: 44px; min-height: 44px; font-size: 25px; font-weight: 400; cursor: pointer; }
+  .wx-tabs { display: flex; gap: 26px; padding: 0 20px; border-bottom: 1px solid var(--wx-line); }
+  .wx-tab { position: relative; padding: 13px 0 15px; min-width: 36px; text-align: center; color: #727272; font-size: 15px; }
+  .wx-tab.is-active { color: #191919; font-weight: 600; }
+  .wx-tab.is-active::after { content: ""; position: absolute; bottom: 0; height: 3px; border-radius: 2px; background: var(--wx-green); width: 20px; left: calc(50% - 10px); }
+  .wx-list-description { font-size: 12px; color: #999; margin: 0; padding: 14px 20px 9px; }
+  .wx-conversation { display: flex; align-items: center; gap: 12px; min-height: 83px; padding: 12px 16px; box-sizing: border-box; color: var(--wx-ink); border-bottom: 1px solid #eeeeee; transition: background 120ms ease; }
+  .wx-conversation:hover { background: #eaeaea; color: var(--wx-ink); }
+  .wx-conversation.is-selected { background: #d9d9d9; }
+  .wx-conversation-avatar { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 7px; overflow: hidden; display: grid; place-items: center; background: #d5e9d9; color: #43865b; font-size: 23px; }
+  .wx-conversation-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .wx-conversation-content { display: block; min-width: 0; flex: 1; }
+  .wx-conversation-line { display: flex; gap: 8px; align-items: baseline; margin-bottom: 7px; }
+  .wx-conversation-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .wx-conversation time { color: #999; font-size: 11px; flex: 0 0 auto; }
+  .wx-conversation-preview { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #999; font-size: 13px; line-height: 1.5; }
+  .wx-list-footer { display: flex; align-items: center; justify-content: space-between; color: #999; font-size: 11px; padding: 10px 18px; border-top: 1px solid var(--wx-line); background: #f7f7f7; }
+  .wx-new-topic { display: grid; place-items: center; border: 0; border-radius: 8px; background: var(--wx-green); color: white; font: 29px/1 sans-serif; width: 44px; height: 40px; cursor: pointer; }
+  .wx-list-state { padding: 28px 20px; color: #888; font-size: 14px; text-align: center; }
+  .wx-list-state button, .wx-load-more { display: block; margin: 12px auto; padding: 10px 18px; border: 0; border-radius: 5px; color: #167347; background: #e6f4ec; cursor: pointer; }
+  .wx-list-empty { text-align: center; padding: 52px 20px; color: #999; font-size: 14px; }
+  .wx-empty-mark { display: block; margin: 0 auto 18px; color: #bbb; }
+  .wx-list-empty button, .wx-welcome button { border: 0; border-radius: 5px; background: #07c160; color: white; padding: 10px 24px; cursor: pointer; }
+  .wx-mobile-back { display: none; }
+  .wx-welcome { color: #b2b2b2; text-align: center; }
+  .wx-welcome h1 { font-size: 20px; font-weight: 500; color: #777; margin: 22px 0 10px; }
+  .wx-welcome p { font-size: 14px; margin-bottom: 24px; }
+  .wx-reply-dock { position: fixed; z-index: 100; bottom: 0; right: 0; left: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); min-height: 64px; box-sizing: border-box; display: flex; gap: 12px; align-items: center; background: #f7f7f7; border-top: 1px solid #dcdcdc; }
+  .wx-reply-input { border: 0; background: #fff; color: #999; display: flex; align-items: center; justify-content: space-between; min-width: 0; flex: 1; border-radius: 6px; padding: 12px 15px; font-size: 15px; min-height: 44px; cursor: text; text-align: left; }
+  .wx-reply-input span:last-child { color: #444; font-size: 23px; line-height: 20px; }
+  .wx-reply-plus { flex: 0 0 38px; height: 38px; border: 1.5px solid #555; border-radius: 50%; color: #444; background: transparent; font: 28px/1 sans-serif; cursor: pointer; }
+  .wx-closed { color: #999; font-size: 13px; text-align: center; width: 100%; padding: 10px; }
+  .wx-chat-heading { position: fixed; z-index: 1000; top: 0; left: calc(var(--wx-sidebar-width) + 24px); right: 100px; height: var(--wx-header-height); display: flex; align-items: center; pointer-events: none; }
+  .wx-chat-heading span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 500; flex: 1; }
+  .wx-chat-heading a { pointer-events: auto; color: #777; flex: 0 0 40px; min-height: 44px; display: grid; place-items: center; font-size: 22px; margin-left: 8px; }
+  &.wx-topic:not(.staff) #topic-title h1 { display: none; }
+  &.wx-topic .d-header .extra-info-wrapper { display: none; }
+  &.wx-topic #main-outlet > .regular, &.wx-topic #main-outlet > .private_message { padding: 0 24px 80px; }
+  &.wx-topic .read-state { right: 0; }
+  &.wx-topic #suggested-topics, &.wx-topic .more-topics__container { display: none; }
+  &:not(.staff) .alert-emails-disabled, &:not(.staff) .alert-bootstrap-mode { display: none; }
+  &:has(#reply-control.open) .wx-reply-dock { display: none; }
+  #reply-control.open {
+    margin: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 0;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -4px 20px rgb(0 0 0 / 5%);
+    background: #f7f7f7;
+    .reply-area { max-width: none; width: 100%; box-sizing: border-box; }
+    .btn-primary { background: #07c160; border-color: #07c160; color: #fff; border-radius: 5px; }
+    .d-editor-textarea-wrapper { border: 1px solid #e3e3e3; border-radius: 5px; }
+  }
+  #reply-control.composer-action-reply.open:not(.fullscreen) { height: 255px !important; max-height: 60dvh; }
+  :is(.wx-tab,.wx-conversation,.wx-icon-button,.wx-new-topic,.wx-reply-input,.wx-reply-plus,.wx-mobile-back):focus-visible { outline: 2px solid #07a451; outline-offset: -3px; }
+}
+
+body.wx-discovery {
+  #main-outlet > .container, #main-outlet > #main-container, .navigation-container, .list-controls, #list-area, .discovery-list-container, #topic-list-heading, .category-breadcrumb, .welcome-banner, .custom-homepage { display: none; }
+  /* Retain the router and composer in the DOM; only replace the discovery view. */
+  #main-outlet .discovery { display: none; }
+}
+
+@media (min-width: 900px) {
+  body.wx-forum {
+    #main-outlet { margin-left: var(--wx-sidebar-width); min-height: calc(100dvh - var(--wx-header-height)); }
+    .wx-conversations { position: fixed; z-index: 90; left: 0; top: var(--wx-header-height); bottom: 0; width: var(--wx-sidebar-width); border-right: 1px solid #d8d8d8; display: flex; flex-direction: column; }
+    .wx-list-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .wx-list-footer { flex-shrink: 0; }
+    .wx-welcome { position: fixed; top: 42%; left: var(--wx-sidebar-width); right: 0; padding: 0 24px; }
+    .wx-reply-dock { left: var(--wx-sidebar-width); }
+    #reply-control.open { left: var(--wx-sidebar-width) !important; width: calc(100% - var(--wx-sidebar-width)) !important; }
+  }
+}
+
+@media (max-width: 899px) {
+  body.wx-forum {
+    --wx-header-height: 54px;
+    .d-header .wrap { padding: 0 14px; }
+    .d-header #site-logo { max-width: 216px; max-height: 29px; }
+    .wx-welcome, .wx-list-heading { display: none; }
+    .wx-conversations { min-height: calc(100dvh - var(--wx-header-height)); background: white; }
+    .wx-tabs { position: sticky; top: var(--wx-header-height); z-index: 95; background: #f7f7f7; gap: 0; justify-content: space-around; padding: 0 36px; }
+    .wx-tab { flex: 1; font-size: 16px; }
+    .wx-list-description { background: #fff; padding: 12px 17px 6px; }
+    .wx-conversation { min-height: 88px; padding: 16px; }
+    .wx-conversation-title { font-size: 16px; }
+    .wx-list-scroll { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+    .wx-list-footer { position: fixed; z-index: 100; bottom: 0; left: 0; right: 0; height: 63px; box-sizing: content-box; padding: 0 20px env(safe-area-inset-bottom); justify-content: center; }
+    .wx-list-footer > span { display: none; }
+    .wx-new-topic { width: 54px; height: 40px; font-size: 31px; }
+    &.wx-topic .wx-conversations { display: none; }
+    &.wx-topic .wx-mobile-back { position: fixed; top: 0; left: 8px; z-index: 1001; display: grid; place-items: center; width: 40px; height: var(--wx-header-height); font-size: 37px; font-weight: 300; color: #222; }
+    &.wx-topic .d-header .title { margin-left: 34px; }
+    &.wx-topic .d-header .title { visibility: hidden; }
+    .wx-chat-heading { left: 54px; right: 65px; }
+    &.wx-topic #main-outlet > .regular, &.wx-topic #main-outlet > .private_message { padding: 0 12px 76px; }
+    &.wx-topic #topic-title { padding-top: 12px; margin-bottom: 14px; border-bottom: 0; }
+    &.wx-topic #topic-title h1 { display: none; }
+    &.wx-topic .d-header .extra-info-wrapper { max-width: calc(100vw - 120px); }
+    &.wx-topic .d-header .extra-info-wrapper .topic-link { font-size: 16px; }
+    .wx-reply-dock { padding-left: 12px; padding-right: 12px; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) { body.wx-forum .wx-conversation { transition: none; } }
+
+// Chat presentation only. Keep the native stream, its document scrolling,
+// controls, and composer intact so reading progress and moderation still work.
+body.wx-forum.wx-topic {
+  --wx-chat-background: #ededed;
+  --wx-chat-bubble: #fff;
+  --wx-chat-own-bubble: #95ec69;
+  --wx-chat-text: #191919;
+  --wx-chat-muted: #777;
+  --wx-chat-avatar-size: 40px;
+  --wx-chat-avatar-gap: 12px;
+  --topic-avatar-width: var(--wx-chat-avatar-size);
+  --topic-body-width-padding: 0px;
+
+  background: var(--wx-chat-background);
+
+  #main-outlet > .regular,
+  #main-outlet > .private_message,
+  .container.posts,
+  .posts-wrapper,
+  .post-stream {
+    background: transparent;
+  }
+
+  #topic-title {
+    margin: 0 0 20px;
+    padding: 18px 0 16px;
+    border-bottom: 1px solid #dcdcdc;
+
+    .title-wrapper {
+      width: 100%;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      line-height: 1.5;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .fancy-title {
+      color: var(--wx-chat-text);
+    }
+
+    .topic-category {
+      font-size: 12px;
+    }
+  }
+
+  .container.posts {
+    width: 100%;
+    min-width: 0;
+    padding-bottom: calc(var(--wx-reply-dock-height, 64px) + 20px);
+
+    > .row {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  .topic-area,
+  .posts-wrapper,
+  .post-stream {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .topic-post {
+    margin: 0 0 20px;
+
+    > article.boxed {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .post__row:has(> .topic-avatar) {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--wx-chat-avatar-gap);
+      margin: 0;
+    }
+
+    .post__row > .topic-avatar {
+      position: static;
+      float: none;
+      flex: 0 0 var(--wx-chat-avatar-size);
+      width: var(--wx-chat-avatar-size);
+      padding: 0;
+      margin: 0;
+      border: 0;
+
+      .avatar {
+        width: var(--wx-chat-avatar-size);
+        height: var(--wx-chat-avatar-size);
+        border-radius: 6px;
+      }
+    }
+
+    .post__row > .topic-body {
+      float: none;
+      flex: 0 1 680px;
+      width: calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap));
+      max-width: calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap));
+      min-width: 0;
+      padding: 0;
+      margin: 0;
+      border: 0;
+    }
+
+    .topic-meta-data {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 10px;
+      min-height: 20px;
+      margin: 0 0 5px;
+      padding: 0;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--wx-chat-muted);
+
+      .names {
+        min-width: 0;
+        margin: 0;
+      }
+
+      .names > span {
+        font-size: 12px;
+        vertical-align: baseline;
+      }
+
+      .names span.first {
+        font-weight: 400;
+      }
+
+      .names:has(.first.full-name) .second.username { display: none; }
+
+      .names a,
+      .post-date {
+        color: var(--wx-chat-muted);
+      }
+
+      .post-infos {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px;
+        min-width: 0;
+        margin-left: auto;
+        font-size: 11px;
+      }
+    }
+
+    .post__contents {
+      min-width: 0;
+      padding: 0;
+    }
+
+    .cooked {
+      box-sizing: border-box;
+      width: fit-content;
+      max-width: 100%;
+      min-width: 36px;
+      padding: 11px 14px;
+      margin: 0;
+      border-radius: 4px 9px 9px;
+      background: var(--wx-chat-bubble);
+      color: var(--wx-chat-text);
+      font-size: 15px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+      box-shadow: 0 1px 1px rgb(0 0 0 / 3%);
+
+      > :first-child { margin-top: 0; }
+      > :last-child { margin-bottom: 0; }
+      p { margin: 0 0 0.75em; }
+      a { color: #476b93; }
+
+      img:not(.emoji),
+      video,
+      iframe,
+      .lightbox-wrapper,
+      .lightbox-wrapper .lightbox {
+        max-width: 100%;
+        border-radius: 4px;
+      }
+
+      img:not(.emoji) { height: auto; }
+
+      pre,
+      .md-table,
+      .md-table table {
+        max-width: 100%;
+        overflow-x: auto;
+      }
+
+      pre {
+        padding: 10px;
+        border-radius: 4px;
+        background: rgb(0 0 0 / 5%);
+        font-size: 13px;
+      }
+
+      blockquote,
+      aside.quote {
+        max-width: 100%;
+        margin: 0.75em 0;
+        border-radius: 4px;
+        border-left: 3px solid #c8c8c8;
+        background: rgb(0 0 0 / 4%);
+        color: #555;
+        font-size: 13px;
+      }
+
+      aside.quote .title {
+        padding: 7px 10px;
+        background: rgb(0 0 0 / 3%);
+      }
+
+      aside.quote blockquote {
+        border-left: 0;
+        margin: 0;
+        background: transparent;
+      }
+
+      .onebox {
+        width: auto;
+        min-width: 0;
+        max-width: 100%;
+        margin: 8px 0;
+        padding: 10px;
+        border-radius: 5px;
+        background: rgb(255 255 255 / 70%);
+      }
+    }
+
+    .post-menu-area {
+      margin: 4px 0 0;
+      padding: 0;
+    }
+
+    .post-controls {
+      min-width: 0;
+      padding: 0;
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1px;
+      }
+
+      button {
+        min-height: 30px;
+        padding: 5px 7px;
+        border-radius: 4px;
+      }
+
+      .fade-out { opacity: 1; }
+    }
+
+    .post-actions,
+    .post-links-container {
+      padding: 0;
+      font-size: 12px;
+    }
+
+    .embedded-posts {
+      box-sizing: border-box;
+      max-width: 100%;
+      margin-top: 8px;
+      border-radius: 5px;
+      background: rgb(255 255 255 / 60%);
+    }
+  }
+
+  // Mirror just the current user's outer message; quoted replies stay readable.
+  .topic-post.post--current-user:not([data-post-number="1"]) {
+    .post__row:has(> .topic-avatar) { flex-direction: row-reverse; }
+    .topic-meta-data .names { flex: 0 1 auto; margin-left: auto; }
+    .topic-meta-data .post-infos { margin-left: 0; }
+
+    .post__row > .topic-body > .post__contents > .cooked {
+      margin-left: auto;
+      border-radius: 9px 4px 9px 9px;
+      background: var(--wx-chat-own-bubble);
+    }
+  }
+
+  // The first post is the discussion brief, not a message from a private chat.
+  .topic-post[data-post-number="1"] {
+    margin-bottom: 28px;
+
+    > article.boxed {
+      padding: 18px;
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .post__row > .topic-body { flex-grow: 1; }
+
+    .cooked {
+      width: 100%;
+      margin: 0;
+      padding: 6px 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .topic-map {
+      width: 100%;
+      max-width: 100%;
+      margin-top: 14px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+  }
+
+  .topic-post.post--selected > article.boxed {
+    outline: 2px solid #07c160;
+    outline-offset: 5px;
+  }
+
+  .topic-post.post--whisper .cooked {
+    border: 1px dashed #aaa;
+  }
+
+  .small-action,
+  .time-gap,
+  .topic-status-info,
+  .topic-timer-info {
+    max-width: 100%;
+    color: var(--wx-chat-muted);
+    font-size: 12px;
+  }
+
+  .topic-footer-main-buttons,
+  .topic-footer-buttons {
+    max-width: 100%;
+  }
+
+  #topic-progress {
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 12px;
+  }
+
+  // Do not cover the native composer, or remove its draft/preview controls.
+  &:has(#reply-control.open) .wx-reply-dock,
+  &.composer-open .wx-reply-dock {
+    display: none;
+  }
+}
+
+// The native timeline switches at 925px, independently of the 900px shell.
+@media (min-width: 925px) {
+  body.wx-forum.wx-topic {
+    .container.posts { grid-template-columns: minmax(0, 1fr) 88px; }
+
+    .container.posts > .topic-navigation {
+      top: calc(var(--header-offset, 54px) + 16px);
+      margin-left: 12px;
+      font-size: 12px;
+    }
+
+    .timeline-container:not(.timeline-fullscreen) {
+      width: 76px;
+
+      .topic-timeline { min-width: 0; }
+      .timeline-controls { flex-wrap: wrap; gap: 4px; }
+      .timeline-footer-controls { max-width: 76px; }
+      .timeline-date-wrapper { overflow-wrap: anywhere; }
+      .timeline-scroller-content { padding-left: 10px; }
+    }
+  }
+}
+
+@media (max-width: 924px) {
+  body.wx-forum.wx-topic {
+    .container.posts { grid-template-columns: minmax(0, 1fr); }
+
+    // Keep the built-in progress/jump button available above the input dock.
+    .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
+      bottom: calc(var(--wx-reply-dock-height, 64px) + env(safe-area-inset-bottom) + 8px);
+    }
+
+    &:has(#reply-control.open) .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
+      bottom: var(--composer-height, 0px);
+    }
+
+    #topic-progress-wrapper #topic-progress {
+      padding: 7px 11px;
+
+      .nums { font-size: 12px; }
+    }
+  }
+}
+
+@media (max-width: 599px) {
+  body.wx-forum.wx-topic {
+    --wx-chat-avatar-size: 34px;
+    --wx-chat-avatar-gap: 9px;
+
+    #topic-title {
+      padding-top: 12px;
+      margin-bottom: 16px;
+
+      h1 { font-size: 17px; }
+    }
+
+    .topic-post {
+      margin-bottom: 18px;
+
+      .topic-meta-data { gap: 3px 6px; }
+      .topic-meta-data .names > span { font-size: 11px; }
+      .topic-meta-data .post-infos { font-size: 10px; }
+      .cooked { padding: 9px 11px; font-size: 15px; }
+      .post-controls button { min-height: 32px; padding: 5px 6px; }
+    }
+
+    .topic-post[data-post-number="1"] {
+      > article.boxed { padding: 12px; }
+      .cooked { padding: 5px 0; }
+      .topic-map { margin-left: 0; }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.wx-forum.wx-topic .topic-timeline { transition: none; }
+}
+
+// Internal account IDs remain in links and permissions, not beside real names.
+body:not(.staff) .topic-map__private-message-map { display: none; }
+body:not(.staff) .alert-emails-disabled { display: none; }
+#user-card .names:has(> .names__primary.full-name) > .names__secondary.username,
+.user-main .user-profile-names:has(> .user-profile-names__primary.full-name) > .user-profile-names__secondary.username {
+  display: none;
+}
+
+// Embed the reusable DockedComposer. The Discourse stream keeps its normal
+// document scrolling; only the dock follows the mobile visual viewport.
+body.wx-forum.wx-topic {
+  --wx-dock-height: 68px;
+  --wx-keyboard-offset: 0px;
+
+  .wx-reply-dock {
+    bottom: var(--wx-keyboard-offset, 0px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-height: 64px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #f7f7f7;
+    border-top: 1px solid #dedede;
+    box-shadow: 0 -1px 0 rgb(255 255 255 / 65%);
+  }
+
+  .wx-inline-composer {
+    width: auto;
+    min-width: 0;
+  }
+
+  .wx-chat-heading > button {
+    pointer-events: auto;
+    flex: 0 0 40px;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: #555;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .wx-topic-menu {
+    position: absolute;
+    top: 52px;
+    right: 0;
+    display: grid;
+    min-width: 140px;
+    padding: 6px;
+    border: 1px solid #e4e4e4;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgb(0 0 0 / 10%);
+    pointer-events: auto;
+
+    a, button {
+      display: block;
+      margin: 0;
+      padding: 10px 14px;
+      min-height: 42px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #333;
+      text-align: left;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      &:hover { background: #f4f4f4; }
+    }
+  }
+
+  .wx-send-notice {
+    margin: 0 0 8px;
+    color: #477b57;
+    font-size: 13px;
+  }
+
+  .is-sending :is(.d-editor-button-bar, .docked-composer__uploads) {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .wx-reply-dock .docked-composer {
+    --docked-composer-input-min-height: 44px;
+    --docked-composer-auto-resize-max-height: 140px;
+    position: static;
+    z-index: auto;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    gap: 8px;
+    background: transparent;
+
+    &::before { display: none; }
+    .docked-composer__resize-handle { display: none; }
+    .docked-composer__header:empty { display: none; }
+    .docked-composer__inner { gap: 0; }
+    .docked-composer__editor { contain: inline-size; }
+    .d-editor-container { min-height: 44px; }
+
+    .d-editor-textarea-column {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      gap: 8px;
+      min-width: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      outline: none;
+      box-shadow: none;
+
+      &:focus-within { border: 0; outline: none; box-shadow: none; }
+    }
+
+    .d-editor-textarea-wrapper {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 76px;
+      align-items: end;
+      gap: 8px;
+      flex: 1;
+      order: 1;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .d-editor-button-bar__wrap {
+      grid-area: 1 / 2;
+      align-self: end;
+      width: 76px;
+      height: 44px;
+      margin: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .d-editor-button-bar {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 0;
+      height: 44px;
+      min-height: 44px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      overflow: visible;
+
+      > :not(.emoji):not(.docked-composer-upload) { display: none; }
+
+      > .emoji,
+      > .docked-composer-upload {
+        display: grid;
+        flex: 0 0 38px;
+        place-items: center;
+        box-sizing: border-box;
+        width: 38px;
+        min-width: 38px;
+        height: 44px;
+        margin: 0;
+        padding: 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #555;
+
+        .d-icon { width: 22px; height: 22px; color: #555; }
+        &:hover { background: #eaeaea; }
+      }
+
+      > .emoji { order: 1; }
+      > .docked-composer-upload { order: 2; }
+    }
+
+    .d-editor-button-bar__scroll-btn { display: none; }
+
+    .d-editor-input {
+      grid-area: 1 / 1;
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      max-height: 140px; // Five 24px lines, including vertical padding.
+      margin: 0;
+      padding: 10px 12px;
+      resize: none;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      outline: none;
+      box-shadow: none;
+      background: #fff;
+      color: #191919;
+      caret-color: #07a451;
+      font: inherit;
+      font-size: 16px; // Prevent iOS from zooming the input when focused.
+      line-height: 24px;
+      -webkit-appearance: none;
+
+      &::placeholder { color: #999; }
+      &:focus { border-color: #c5e7d3; box-shadow: none; }
+      &:disabled { background: #f0f0f0; color: #888; }
+    }
+
+    .ProseMirror-container {
+      grid-area: 1 / 1;
+      min-width: 0;
+      min-height: 44px;
+      max-height: 140px;
+      border-radius: 6px;
+      background: #fff;
+      overflow-y: auto;
+
+      .ProseMirror.d-editor-input { min-height: 44px; max-height: none; }
+      .ProseMirror p { margin: 0; }
+    }
+
+    .d-editor-preview-wrapper { display: none; }
+  }
+
+  .wx-send {
+    position: static;
+    order: 2;
+    flex: 0 0 auto;
+    min-width: 58px;
+    min-height: 42px;
+    margin: 0 0 1px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 5px;
+    background: #07b75b !important;
+    color: #fff !important;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 22px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { background: #06a853 !important; }
+    &:active:not(:disabled) { background: #079b4d !important; }
+    &:disabled { background: #e7e7e7 !important; color: #ababab !important; cursor: default; }
+  }
+
+  .wx-attach,
+  .wx-attach button {
+    display: grid;
+    flex: 0 0 42px;
+    place-items: center;
+    width: 42px;
+    height: 44px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #555;
+    font-size: 29px;
+    line-height: 1;
+    cursor: pointer;
+
+    .d-icon { width: 26px; height: 26px; }
+    &:hover { background: #eaeaea; }
+    &[aria-expanded="true"] { color: #07974c; background: #e4f2e9; }
+    &:disabled { color: #bbb; cursor: default; }
+  }
+
+  .wx-reply-context {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin: 0 0 8px;
+    padding: 2px 2px 2px 10px;
+    border-left: 3px solid #c6d7ca;
+    color: #777;
+    font-size: 12px;
+    line-height: 19px;
+
+    > :first-child:not(button) {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    strong { font-weight: 500; color: #5e725f; }
+    button {
+      display: grid;
+      flex: 0 0 32px;
+      place-items: center;
+      width: 32px;
+      min-height: 30px;
+      margin-left: auto;
+      padding: 0;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #777;
+      font-size: 20px;
+      cursor: pointer;
+    }
+  }
+
+  .wx-attachments,
+  .wx-reply-dock .docked-composer__uploads {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    max-height: 110px;
+    margin: 0 0 9px;
+    padding: 3px 1px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+
+    &:empty { display: none; }
+
+    .wx-attachment,
+    .docked-composer__upload {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex: 0 0 auto;
+      max-width: 220px;
+      min-height: 60px;
+      padding: 5px 30px 5px 5px;
+      box-sizing: border-box;
+      border: 1px solid #e1e1e1;
+      border-radius: 6px;
+      background: #fff;
+      color: #777;
+      font-size: 12px;
+
+      img { display: block; width: 60px; height: 60px; border-radius: 4px; object-fit: cover; }
+      span { overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+      button {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 29px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        border-radius: 0 5px 0 5px;
+        background: #f0f0f0;
+        color: #666;
+        font-size: 19px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .wx-send-error {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    background: #fff1ef;
+    color: #a64337;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+
+    &:empty { display: none; }
+  }
+
+  .wx-chat-tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(66px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    padding: 12px 2px 2px;
+    border-top: 1px solid #e5e5e5;
+
+    > button,
+    > a,
+    > label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-sizing: border-box;
+      min-width: 0;
+      min-height: 65px;
+      padding: 9px 6px;
+      border: 0;
+      border-radius: 8px;
+      background: #fff;
+      color: #626262;
+      font: inherit;
+      font-size: 12px;
+      line-height: 1.4;
+      text-align: center;
+      cursor: pointer;
+
+      .d-icon { width: 22px; height: 22px; color: #4b4b4b; }
+      &:hover { background: #ececec; }
+      &:disabled { opacity: 0.45; cursor: default; }
+    }
+
+    input[type="file"] { display: none; }
+  }
+
+  :is(.wx-send, .wx-attach, .wx-attach button, .wx-chat-tools > button,
+      .wx-chat-tools > a, .wx-reply-context button, .wx-attachment button,
+      .docked-composer-upload, .insert-composer-emoji):focus-visible {
+    outline: 2px solid #07974c;
+    outline-offset: 2px;
+  }
+
+  .container.posts {
+    padding-bottom: calc(var(--wx-dock-height, 68px) + 20px);
+  }
+
+  // Topic actions for staff remain available. Post actions (like, reply,
+  // report, edit and the overflow menu) are deliberately left intact.
+  &:not(.staff) {
+    #topic-footer-buttons { display: none; }
+    .topic-map__stats { display: none; }
+    .topic-map:has(.topic-map__contents):not(:has(.topic-map__private-message-map)) {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+  }
+
+  .topic-post[data-post-number="1"] {
+    margin-bottom: 22px;
+
+    > article.boxed { padding: 14px; border-radius: 7px; }
+    .cooked {
+      font-size: 15px;
+      line-height: 1.65;
+      p { margin-bottom: 0.65em; }
+      h1, h2 { font-size: 1.2em; line-height: 1.5; margin: 1em 0 0.5em; }
+      h3, h4 { font-size: 1.05em; line-height: 1.5; margin: 0.9em 0 0.45em; }
+      ul, ol { margin-top: 0.5em; margin-bottom: 0.7em; }
+      > :first-child { margin-top: 0; }
+      > :last-child { margin-bottom: 0; }
+    }
+  }
+}
+
+@media (min-width: 900px) {
+  body.wx-forum.wx-topic {
+    .wx-reply-dock { left: var(--wx-sidebar-width, 320px); padding-left: 22px; padding-right: 22px; }
+    .wx-chat-tools { grid-template-columns: repeat(4, minmax(70px, 100px)); justify-content: start; }
+  }
+}
+
+@media (max-width: 924px) {
+  body.wx-forum.wx-topic {
+    .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
+      bottom: calc(var(--wx-dock-height, 68px) + var(--wx-keyboard-offset, 0px) + 8px);
+    }
+  }
+}
+
+@media (max-width: 599px) {
+  body.wx-forum.wx-topic {
+    .wx-reply-dock { padding-left: 10px; padding-right: 10px; }
+    .wx-reply-dock .docked-composer .d-editor-textarea-column { gap: 7px; }
+    .wx-attach, .wx-attach button { flex-basis: 36px; width: 36px; }
+    .wx-send { min-width: 56px; padding-left: 12px; padding-right: 12px; }
+    .topic-post[data-post-number="1"] > article.boxed { padding: 12px; }
+    .topic-post .post-controls button { min-height: 36px; }
+  }
+}
+
+// The original PostMenu is revealed on demand; never clone its action buttons.
+body.wx-forum.wx-topic {
+  .topic-post.wx-has-message-actions .post-menu-area {
+    position: relative;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .wx-message-actions.is-enhanced { position: relative; height: 0; }
+  .wx-message-actions:not(.is-enhanced) > .wx-message-actions-popover { display: contents; }
+  .wx-message-actions:not(.is-enhanced) > .wx-message-actions-trigger { display: none; }
+
+  .wx-message-actions.is-enhanced > .wx-message-actions-trigger {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    top: 2px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: #e3e3e3;
+    color: #777;
+    font: 12px/1 sans-serif;
+    letter-spacing: 2px;
+    opacity: 0;
+    pointer-events: none;
+    cursor: pointer;
+
+    &:focus-visible,
+    &[aria-expanded="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      outline: 2px solid #07974c;
+      outline-offset: 2px;
+    }
+  }
+
+  &.staff .wx-message-actions.is-enhanced > .wx-message-actions-trigger { opacity: 1; pointer-events: auto; }
+
+  // A link or a playing video keeps its native long-press interaction. These
+  // messages get a small fallback trigger without restoring the action row.
+  .topic-post:has(.cooked > p:only-child > a:only-child:not(.lightbox)),
+  .topic-post:has(.cooked video, .cooked audio, .cooked iframe) {
+    margin-bottom: 34px;
+    .wx-message-actions-trigger { opacity: 1; pointer-events: auto; }
+  }
+
+  .wx-message-actions.is-enhanced > .wx-message-actions-popover {
+    position: fixed;
+    z-index: 250;
+    top: var(--wx-message-menu-top, 0px);
+    left: var(--wx-message-menu-left, 0px);
+    box-sizing: border-box;
+    width: min(312px, calc(100vw - 16px));
+    max-height: min(320px, 60dvh, var(--wx-message-menu-max-height, 320px));
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #444;
+    border-radius: 9px;
+    background: #353535;
+    color: #fff;
+    box-shadow: 0 5px 20px rgb(0 0 0 / 20%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    opacity: 0;
+    pointer-events: none;
+
+    &[hidden] { display: none !important; }
+    &[data-positioned="true"] { opacity: 1; pointer-events: auto; }
+
+    .post-controls { float: none; width: 100%; padding: 0; }
+
+    .post-controls .actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 4px;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      float: none;
+    }
+
+    .post-controls .actions > :is(.double-button, .fk-d-menu__trigger) { min-width: 0; }
+    .post-controls .double-button {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      justify-content: center;
+      gap: 0;
+      margin: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .post-controls :is(button, .btn) {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-sizing: border-box;
+      min-width: 0;
+      width: 100%;
+      min-height: 61px;
+      margin: 0;
+      padding: 10px 4px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.25;
+      opacity: 1;
+      white-space: normal;
+
+      .d-icon { width: 19px; height: 19px; color: #fff; }
+      .d-button-label { margin: 0; }
+      &:hover:not(:disabled) { background: #494949; color: #fff; }
+      &:focus-visible { outline: 2px solid #95ec69; outline-offset: -2px; }
+      &:disabled { color: #a5a5a5; opacity: 0.65; }
+      &:disabled .d-icon { color: #a5a5a5; }
+    }
+
+    .post-controls .has-like .d-icon { color: #ff7b8d; }
+    .post-controls .reaction-button::after { content: "赞"; }
+    .post-controls .reaction-button > span[aria-hidden="true"] { display: none; }
+    .post-controls .double-button > .toggle-like { flex: 1 1 100%; }
+    .post-controls .double-button > .button-count {
+      flex: 1 1 100%;
+      order: 2;
+      min-height: 25px;
+      padding: 3px;
+      color: #cfcfcf;
+      font-size: 11px;
+    }
+
+    .post-controls > .show-replies { min-height: 38px; margin-bottom: 4px; }
+    .who-read { padding: 8px; border-top: 1px solid #555; color: #eee; }
+    .who-read:not(:has(a, img, button)) { display: none; }
+    .wx-message-copy {
+      width: 100%;
+      min-height: 39px;
+      margin: 6px 0 0;
+      padding: 8px;
+      border: 0;
+      border-top: 1px solid #555;
+      border-radius: 0 0 4px 4px;
+      background: transparent;
+      color: #ddd;
+      font-size: 12px;
+      cursor: pointer;
+
+      &:hover { background: #494949; color: #fff; }
+      &:focus-visible { outline: 2px solid #95ec69; outline-offset: -2px; }
+    }
+    .wx-message-copy-error { margin: 4px; color: #e8bcb3; font-size: 12px; }
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.wx-forum.wx-topic .topic-post:hover .wx-message-actions-trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.wx-new-topic-modal {
+  --wx-topic-green: #07c160;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  .d-modal__container { width: min(520px, calc(100vw - 32px)); border-radius: 16px; background: #f7f7f7; }
+  .d-modal__header { padding: 20px 22px 14px; border-bottom: 0; }
+  .d-modal__title { color: #191919; font-size: 19px; font-weight: 600; }
+  .d-modal__body { padding: 2px 22px 12px; }
+  .d-modal__footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 0; padding: 12px 22px 20px; }
+  .wx-topic-fields { display: flex; flex-direction: column; gap: 10px; }
+  .wx-topic-fields > label { margin: 10px 0 0; color: #343434; font-size: 14px; font-weight: 500; }
+  .wx-topic-fields > label span { color: #949494; font-weight: 400; }
+  .wx-topic-title-input, .wx-topic-body-input {
+    box-sizing: border-box; width: 100%; margin: 0; padding: 12px 13px; border: 1px solid #e5e5e5; border-radius: 8px;
+    background: #fff; color: #191919; font: inherit; font-size: 16px; line-height: 1.5; box-shadow: none;
+    &::placeholder { color: #aaa; }
+    &:focus { border-color: #7ed7a8; outline: 2px solid #07c16022; }
+    &:disabled { opacity: .65; }
+  }
+  .wx-topic-body-input { min-height: 118px; max-height: 35vh; resize: vertical; }
+  .wx-topic-images { display: flex; flex-wrap: wrap; gap: 10px; }
+  .wx-topic-image, .wx-topic-uploading { position: relative; width: 76px; height: 76px; border-radius: 7px; background: #eaeaea; }
+  .wx-topic-image img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+  .wx-topic-image button, .wx-topic-uploading button { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 25px; height: 25px; border: 0; border-radius: 50%; background: #555e; color: white; font-size: 19px; cursor: pointer; }
+  .wx-topic-uploading { display: flex; flex-direction: column; justify-content: center; gap: 6px; box-sizing: border-box; padding: 9px; color: #777; font-size: 12px; text-align: center; }
+  .wx-topic-uploading span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wx-topic-add-image { align-self: flex-start; display: flex; align-items: center; gap: 5px; min-height: 42px; padding: 4px 2px; border: 0; background: transparent; color: #168b4f; font-size: 14px; cursor: pointer; }
+  .wx-topic-add-image span { font-size: 22px; }
+  .wx-topic-add-image:disabled { opacity: .45; cursor: default; }
+  .wx-topic-file-input { display: none; }
+  .wx-topic-draft-note { margin: 9px 0 0; color: #999; font-size: 12px; }
+  .wx-topic-state, .wx-topic-error, .wx-topic-notice { margin: 8px 0 12px; padding: 11px 12px; border-radius: 7px; font-size: 14px; line-height: 1.6; }
+  .wx-topic-state { color: #888; }
+  .wx-topic-error { color: #b34839; background: #fff0ed; }
+  .wx-topic-notice { color: #167347; background: #e7f5ed; }
+  .wx-topic-cancel, .wx-topic-create { min-height: 42px; padding: 10px 20px; border-radius: 7px; border: 0; font-size: 15px; }
+  .wx-topic-cancel { background: #e9e9e9; color: #666; }
+  .wx-topic-create { background: var(--wx-topic-green); color: white; }
+  .wx-topic-create:not(:disabled):hover { background: #06ad56; }
+  .wx-topic-create:disabled { opacity: .45; }
+  button:focus-visible { outline: 2px solid #078b46; outline-offset: 2px; }
+}
+
+@media (max-width: 767px) {
+  .wx-new-topic-modal {
+    .d-modal__container { width: 100%; max-width: none; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92dvh; }
+    .d-modal__header { padding: 19px 18px 10px; }
+    .d-modal__body { padding: 2px 18px 12px; }
+    .d-modal__footer { padding: 12px 18px max(16px, env(safe-area-inset-bottom)); }
+    .wx-topic-create { flex: 1; }
+    .wx-topic-title-input, .wx-topic-body-input { font-size: 16px; }
+  }
+}
+
+// The public experience is organized around conversations. Categories remain a
+// backend permission/storage choice; do not remove staff moderation controls.
+body.wx-forum:not(.staff) {
+  #create-topic, .topic-drafts-menu-trigger { display: none !important; }
+  &.wx-topic {
+    .topic-category,
+    #topic-title .discourse-tags,
+    #topic-title .topic-header-extra .list-tags,
+    .topic-navigation .discourse-tags { display: none !important; }
+  }
+}

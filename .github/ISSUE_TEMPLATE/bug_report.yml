@@ -1,0 +1,45 @@
+name: 问题报告
+description: 报告可以复现的界面或交互问题
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "安全漏洞请按 SECURITY.md 私下报告。不要附真实手机号、用户标识、Cookie、令牌或后台备份。"
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 问题与预期
+      description: 实际发生了什么？原本期望怎样？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 使用虚构内容，写出从进入页面到出现问题的步骤。
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: 主题与 Discourse 版本
+      placeholder: 主题提交或标签；Discourse 版本
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 设备与浏览器
+      description: 说明手机型号、系统、浏览器，以及是否在微信内打开；模拟视口请明确注明。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 脱敏截图或错误信息
+      description: 只提供定位问题需要的内容，不要上传完整生产日志。
+  - type: textarea
+    id: scope
+    attributes:
+      label: 影响范围与临时解决办法
+      description: 哪些用户角色或操作受影响？关闭本组件后是否仍出现？

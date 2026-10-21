@@ -1,0 +1,41 @@
+# Local dependencies and tooling
+node_modules/
+.cache/
+.eslintcache
+.DS_Store
+.idea/
+.vscode/
+coverage/
+test-results/
+playwright-report/
+
+# Private configuration and authentication material
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+.wrangler/
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+
+# Instance data, diagnostic output, and local release artifacts
+backups/
+uploads/
+private/
+tmp/
+*.log
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+*.tar
+*.tar.gz
+*.zip
+
+# common/common.scss is a tracked release file; do not ignore it.
