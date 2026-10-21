@@ -6,7 +6,7 @@ if (args.some((arg) => arg !== "--check")) {
   console.error("Usage: node scripts/build-css.mjs [--check]");
   process.exitCode = 2;
 } else {
-  const parts = ["shell", "chat", "inline-chat", "message-actions", "topic-groups"];
+  const parts = ["shell", "chat", "inline-chat", "message-actions", "topic-groups", "profile-card"];
   const directory = new URL("../common/", import.meta.url);
   const target = new URL("common.scss", directory);
   try {
@@ -21,11 +21,11 @@ if (args.some((arg) => arg !== "--check")) {
         console.error("common/common.scss is missing or stale. Run: node scripts/build-css.mjs");
         process.exitCode = 1;
       } else {
-        console.log("CSS check passed: common/common.scss matches all five source files.");
+        console.log("CSS check passed: common/common.scss matches all source files.");
       }
     } else {
       await fs.writeFile(target, expected, "utf8");
-      console.log("Generated common/common.scss: shell → chat → inline-chat → message-actions → topic-groups.");
+      console.log(`Generated common/common.scss: ${parts.join(" → ")}.`);
     }
   } catch (error) {
     console.error(`CSS build failed: ${error.message}`);

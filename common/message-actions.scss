@@ -1,6 +1,31 @@
 // The original PostMenu is revealed on demand; never clone its action buttons.
 body.wx-forum.wx-topic {
-  .topic-post.wx-has-message-actions .post-menu-area {
+  // No touch-action override and no touchstart preventDefault: page scrolling,
+  // pinch zoom and short link/image taps remain browser gestures.
+  .topic-post[data-wx-message-actions="true"][data-wx-pointer-mode="touch"]:not([data-wx-selecting="true"]) .cooked {
+    &, *:not(input, textarea, [contenteditable]) {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+  }
+  .topic-post[data-wx-selecting="true"] .cooked {
+    &, *:not(input, textarea, [contenteditable]) {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+  }
+
+  // The quote toolbar is portalled outside the post. During a mode switch an
+  // already-running core fast-edit check may resolve for one render; its exact
+  // toolbar stays hidden until our component hook closes that stale instance.
+  &:has(.topic-post[data-wx-menu-open="true"][data-wx-pointer-mode="touch"], .topic-post[data-wx-selecting="true"]) .fk-d-menu:has(.quote-button) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .topic-post[data-wx-message-actions="true"] .post-menu-area {
     position: relative;
     min-height: 0;
     margin: 0;
@@ -42,9 +67,8 @@ body.wx-forum.wx-topic {
 
   &.staff .wx-message-actions.is-enhanced > .wx-message-actions-trigger { opacity: 1; pointer-events: auto; }
 
-  // A link or a playing video keeps its native long-press interaction. These
-  // messages get a small fallback trigger without restoring the action row.
-  .topic-post:has(.cooked > p:only-child > a:only-child:not(.lightbox)),
+  // Embedded players keep their own controls; provide an unobtrusive message
+  // action entry beside them. Links and images use the normal touch hold.
   .topic-post:has(.cooked video, .cooked audio, .cooked iframe) {
     margin-bottom: 34px;
     .wx-message-actions-trigger { opacity: 1; pointer-events: auto; }
@@ -87,6 +111,10 @@ body.wx-forum.wx-topic {
     }
 
     .post-controls .actions > :is(.double-button, .fk-d-menu__trigger) { min-width: 0; }
+    .post-controls .actions > .post-action-menu__reply { order: -4; }
+    .post-controls .actions > :is(.double-button, .post-action-menu__like) { order: -3; }
+    .post-controls .actions > :is(.post-action-menu__share, .post-action-menu__copy-link) { order: -2; }
+    .post-controls .actions > .post-action-menu__bookmark { order: -1; }
     .post-controls .double-button {
       display: flex;
       flex-wrap: wrap;
@@ -141,16 +169,38 @@ body.wx-forum.wx-topic {
     }
 
     .post-controls > .show-replies { min-height: 38px; margin-bottom: 4px; }
+    .post-controls :is(.post-action-menu__reply, .post-action-menu__share, .post-action-menu__bookmark, .post-action-menu__edit, .post-action-menu__delete, .post-action-menu__recover, .post-action-menu__like, .post-action-menu__flag, .post-action-menu__copy-link, .post-action-menu__admin) > .d-button-label { display: none; }
+    .post-action-menu__reply::after { content: "回复"; }
+    .post-action-menu__share::after { content: "分享"; }
+    .post-action-menu__bookmark::after { content: "收藏"; }
+    .post-action-menu__edit::after { content: "编辑"; }
+    .post-action-menu__delete::after { content: "删除"; }
+    .post-action-menu__recover::after { content: "恢复"; }
+    .post-action-menu__like::after { content: "赞"; }
+    .post-action-menu__like.has-like::after { content: "已赞"; }
+    .post-action-menu__flag::after { content: "举报"; }
+    .post-action-menu__copy-link::after { content: "复制链接"; }
+    .post-action-menu__admin::after { content: "管理"; }
+    .post-controls :is(.post-action-menu__delete, .post-action-menu__delete .d-icon) { color: #ffb3ab; }
+    .post-controls :is(.post-action-menu__admin, .post-action-menu__flag) { color: #ccc; }
+
     .who-read { padding: 8px; border-top: 1px solid #555; color: #eee; }
     .who-read:not(:has(a, img, button)) { display: none; }
-    .wx-message-copy {
+    .wx-message-text-tools {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #555;
+    }
+    .wx-message-text-tools > button {
       width: 100%;
-      min-height: 39px;
-      margin: 6px 0 0;
+      min-height: 40px;
+      margin: 0;
       padding: 8px;
       border: 0;
-      border-top: 1px solid #555;
-      border-radius: 0 0 4px 4px;
+      border-radius: 4px;
       background: transparent;
       color: #ddd;
       font-size: 12px;
@@ -160,6 +210,38 @@ body.wx-forum.wx-topic {
       &:focus-visible { outline: 2px solid #95ec69; outline-offset: -2px; }
     }
     .wx-message-copy-error { margin: 4px; color: #e8bcb3; font-size: 12px; }
+  }
+
+  .wx-message-selection-tools {
+    position: fixed;
+    z-index: 250;
+    left: 50%;
+    bottom: calc(var(--wx-dock-height, 76px) + var(--wx-keyboard-offset, 0px) + 12px);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: max-content;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+    padding: 8px 8px 8px 12px;
+    border-radius: 8px;
+    background: #353535;
+    color: #fff;
+    box-shadow: 0 3px 14px rgb(0 0 0 / 18%);
+    font-size: 12px;
+    line-height: 1.4;
+
+    button {
+      flex-shrink: 0;
+      min-height: 36px;
+      padding: 8px 12px;
+      border: 0;
+      border-radius: 5px;
+      background: #95ec69;
+      color: #17331b;
+      cursor: pointer;
+    }
   }
 }
 

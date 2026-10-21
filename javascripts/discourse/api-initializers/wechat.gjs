@@ -54,6 +54,7 @@ export default apiInitializer("1.0", (api) => {
   // creates a new InlineReply instance before A's request has finished.
   const pendingReplies = new Map();
   let activeMessageActions = null;
+  let activeTextSelection = null;
   let messageActionSequence = 0;
 
   class Conversations extends Component {
@@ -223,6 +224,7 @@ export default apiInitializer("1.0", (api) => {
     instanceId = ++messageActionSequence;
     @service router;
     @tracked isOpen = false;
+    @tracked isSelecting = false;
     @tracked ready = false;
     @tracked copyState = "";
     element = null;
@@ -235,6 +237,7 @@ export default apiInitializer("1.0", (api) => {
     actionFrame = null;
     suppressClickUntil = 0;
     lastPointerType = "mouse";
+    touchGestureMoved = false;
     interactiveSelector = "button, input, textarea, select, video, audio, iframe, [contenteditable]";
     nestedPopupSelector = ".fk-d-menu, .fk-d-menu-modal, .d-modal, .modal-inner-container, .emoji-picker";
 
@@ -251,7 +254,7 @@ export default apiInitializer("1.0", (api) => {
     get triggerHidden() { return !this.ready; }
     get canCopy() { return !!(this.bubble?.innerText || this.bubble?.textContent || "").trim(); }
     get copying() { return this.copyState === "copying"; }
-    get copyLabel() { return this.copyState === "copied" ? "已复制正文" : this.copying ? "正在复制…" : "复制正文"; }
+    get copyLabel() { return this.copyState === "copied" ? "已复制" : this.copying ? "复制中…" : "复制"; }
     get copyError() { return this.copyState === "failed"; }
 
     @action setup(element) {
@@ -261,7 +264,12 @@ export default apiInitializer("1.0", (api) => {
       this.bubble = this.postElement?.querySelector(".post__contents > .cooked");
       this.menu = element.querySelector(".wx-message-actions-popover");
       if (!this.postElement || !this.bubble || !this.menu) return;
-      this.postElement.classList.add("wx-has-message-actions");
+      // Core re-renders the post's complete class attribute. Theme-owned data
+      // attributes survive that update and never compete with its class list.
+      this.postElement.dataset.wxMessageActions = "true";
+      // Establish touch behavior before the browser starts its native long-press
+      // timer. A later mouse pointer restores normal desktop text selection.
+      if (window.matchMedia?.("(any-pointer: coarse)").matches) this.setPointerMode("touch");
       this.postElement.addEventListener("pointerdown", this.pointerDown, { passive: true });
       this.postElement.addEventListener("contextmenu", this.contextMenu);
       this.postElement.addEventListener("keydown", this.postKeyDown);
@@ -272,10 +280,14 @@ export default apiInitializer("1.0", (api) => {
     @action teardown() {
       this.cancelPress();
       this.closeMenu();
+      this.endTextSelection();
       if (this.positionFrame !== null) window.cancelAnimationFrame(this.positionFrame);
       if (this.actionFrame !== null) window.cancelAnimationFrame(this.actionFrame);
       this.positionFrame = this.actionFrame = null;
-      this.postElement?.classList.remove("wx-has-message-actions", "wx-message-menu-open", "wx-message-pressing");
+      if (this.postElement) {
+        delete this.postElement.dataset.wxMessageActions;
+        delete this.postElement.dataset.wxPointerMode;
+      }
       this.postElement?.removeEventListener("pointerdown", this.pointerDown);
       this.postElement?.removeEventListener("contextmenu", this.contextMenu);
       this.postElement?.removeEventListener("keydown", this.postKeyDown);
@@ -285,11 +297,26 @@ export default apiInitializer("1.0", (api) => {
     }
 
     eligibleTarget(target) {
-      if (!target?.closest || !this.bubble?.contains(target) || target.closest(this.interactiveSelector)) return false;
-      // A short image tap still opens the lightbox. Only a completed hold
-      // suppresses that click. Ordinary links keep their browser context menu.
-      const link = target.closest("a");
-      return !link || !!target.closest("img") || link.classList.contains("lightbox");
+      // Links and pictures are part of the message: taps keep their native
+      // action, while a completed touch hold opens this message's controls.
+      return !!(target?.closest && this.bubble?.contains(target) && !target.closest(this.interactiveSelector));
+    }
+
+    setPointerMode(type) {
+      this.lastPointerType = type || "mouse";
+      const touch = ["touch", "pen"].includes(this.lastPointerType);
+      if (this.postElement) this.postElement.dataset.wxPointerMode = touch ? "touch" : "mouse";
+    }
+
+    closeQuoteToolbar() {
+      // The core owns this floating menu. Close its exact identifier rather
+      // than hiding unrelated menus or intercepting document selection events.
+      api.container.lookup("service:menu").close("post-text-selection-toolbar");
+      api.container.lookup("controller:topic").quoteState?.clear();
+    }
+
+    clearBubbleSelection() {
+      if (this.hasSelectedText()) window.getSelection()?.removeAllRanges();
     }
 
     hasSelectedText() {
@@ -301,10 +328,14 @@ export default apiInitializer("1.0", (api) => {
     @action pointerDown(event) {
       this.cancelPress();
       this.suppressClickUntil = 0;
-      this.lastPointerType = event.pointerType || "mouse";
+      this.setPointerMode(event.pointerType);
+      this.touchGestureMoved = false;
       if (event.isPrimary === false || event.button !== 0 ||
           !["touch", "pen"].includes(this.lastPointerType) ||
-          !this.eligibleTarget(event.target) || this.hasSelectedText()) return;
+          !this.eligibleTarget(event.target) || this.isSelecting) return;
+
+      this.clearBubbleSelection();
+      this.closeQuoteToolbar();
 
       this.press = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
       document.addEventListener("pointermove", this.pointerMove, { capture: true, passive: true });
@@ -321,10 +352,14 @@ export default apiInitializer("1.0", (api) => {
 
     @action pointerMove(event) {
       if (!this.press || event.pointerId !== this.press.pointerId) return;
-      if (Math.hypot(event.clientX - this.press.x, event.clientY - this.press.y) > 8) this.cancelPress();
+      if (Math.hypot(event.clientX - this.press.x, event.clientY - this.press.y) > 8) {
+        this.touchGestureMoved = true;
+        this.cancelPress();
+      }
     }
 
     @action pointerEnd(event) {
+      if (event.type === "pointercancel") this.touchGestureMoved = true;
       if (!this.press || event.pointerId === this.press.pointerId) this.cancelPress();
     }
 
@@ -332,7 +367,6 @@ export default apiInitializer("1.0", (api) => {
       if (this.pressTimer !== null) window.clearTimeout(this.pressTimer);
       this.pressTimer = null;
       this.press = null;
-      this.postElement?.classList.remove("wx-message-pressing");
       document.removeEventListener("pointermove", this.pointerMove, true);
       document.removeEventListener("pointerup", this.pointerEnd, true);
       document.removeEventListener("pointercancel", this.pointerEnd, true);
@@ -340,17 +374,26 @@ export default apiInitializer("1.0", (api) => {
     }
 
     @action contextMenu(event) {
-      if (this.hasSelectedText()) { this.cancelPress(); return; }
       if (!this.eligibleTarget(event.target)) return;
+      const touch = ["touch", "pen"].includes(event.pointerType || this.lastPointerType);
+      // Explicit selection gets only the operating system's native menu.
+      // Desktop selection and link context menus remain familiar as well.
+      if (this.isSelecting || (!touch && (this.hasSelectedText() || event.target.closest("a")))) {
+        this.cancelPress();
+        return;
+      }
       event.preventDefault();
+      if (touch && this.touchGestureMoved) return;
+      if (this.isOpen) return;
       this.suppressClickUntil = Date.now() + 900;
-      this.openMenu({ x: event.clientX, y: event.clientY, focus: this.lastPointerType === "mouse" });
+      this.openMenu({ x: event.clientX, y: event.clientY, focus: !touch });
     }
 
     @action postKeyDown(event) {
       if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
       const trigger = event.target.closest?.(".wx-message-actions-trigger");
       if (!trigger && !this.eligibleTarget(event.target)) return;
+      if (!trigger && (this.isSelecting || this.hasSelectedText() || event.target.closest("a"))) return;
       event.preventDefault();
       this.openMenu({ focus: true });
     }
@@ -370,11 +413,16 @@ export default apiInitializer("1.0", (api) => {
     openMenu({ x, y, focus = false } = {}) {
       if (!this.menu || !this.bubble?.isConnected || this.isDestroying || this.isDestroyed) return;
       this.cancelPress();
+      activeTextSelection?.endTextSelection();
+      if (["touch", "pen"].includes(this.lastPointerType)) {
+        this.clearBubbleSelection();
+        this.closeQuoteToolbar();
+      }
       activeMessageActions?.closeMenu();
       activeMessageActions = this;
       this.isOpen = true;
       this.copyState = "";
-      this.postElement.classList.add("wx-message-menu-open");
+      this.postElement.dataset.wxMenuOpen = "true";
       document.addEventListener("pointerdown", this.outsidePointer, true);
       document.addEventListener("keydown", this.documentKeyDown, true);
       document.addEventListener("focusin", this.focusChanged, true);
@@ -418,7 +466,7 @@ export default apiInitializer("1.0", (api) => {
       if (activeMessageActions === this) activeMessageActions = null;
       if (this.positionFrame !== null) window.cancelAnimationFrame(this.positionFrame);
       this.positionFrame = null;
-      this.postElement?.classList.remove("wx-message-menu-open");
+      if (this.postElement) delete this.postElement.dataset.wxMenuOpen;
       if (this.menu) delete this.menu.dataset.positioned;
       document.removeEventListener("pointerdown", this.outsidePointer, true);
       document.removeEventListener("keydown", this.documentKeyDown, true);
@@ -441,8 +489,49 @@ export default apiInitializer("1.0", (api) => {
 
     @action viewportChanged(event) {
       if (event?.target && (this.menu?.contains(event.target) || this.isNestedPopup(event.target))) return;
+      this.touchGestureMoved = true;
       this.cancelPress();
       this.closeMenu();
+    }
+
+    @action selectText() {
+      if (!this.canCopy || !this.bubble?.isConnected) return;
+      this.closeMenu();
+      activeTextSelection?.endTextSelection();
+      activeTextSelection = this;
+      this.isSelecting = true;
+      this.suppressClickUntil = 0;
+      this.postElement.dataset.wxSelecting = "true";
+      this.closeQuoteToolbar();
+      document.addEventListener("pointerdown", this.selectionOutside, true);
+      document.addEventListener("keydown", this.selectionKeyDown, true);
+      // This user-initiated range gives native selection handles on supported
+      // WebViews. Other browsers can long-press the now-selectable text.
+      const selection = window.getSelection?.();
+      const range = document.createRange();
+      range.selectNodeContents(this.bubble);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+
+    @action endTextSelection() {
+      if (activeTextSelection === this) activeTextSelection = null;
+      if (this.isSelecting) this.clearBubbleSelection();
+      if (!this.isDestroying && !this.isDestroyed) this.isSelecting = false;
+      if (this.postElement) delete this.postElement.dataset.wxSelecting;
+      document.removeEventListener("pointerdown", this.selectionOutside, true);
+      document.removeEventListener("keydown", this.selectionKeyDown, true);
+    }
+
+    @action selectionOutside(event) {
+      if (!this.bubble?.contains(event.target) && !this.element?.contains(event.target) && !this.isNestedPopup(event.target)) this.endTextSelection();
+    }
+
+    @action selectionKeyDown(event) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      this.endTextSelection();
+      this.element?.querySelector(".wx-message-actions-trigger")?.focus({ preventScroll: true });
     }
 
     @action documentKeyDown(event) {
@@ -498,9 +587,15 @@ export default apiInitializer("1.0", (api) => {
           <button type="button" class="wx-message-actions-trigger" hidden={{this.triggerHidden}} aria-label={{this.triggerLabel}} aria-haspopup="dialog" aria-controls={{this.menuId}} aria-expanded={{this.isOpen}} {{on "click" this.toggleMenu}}>•••</button>
           <div id={{this.menuId}} class="wx-message-actions-popover" role={{if this.ready "dialog"}} aria-label="消息操作" tabindex="-1" hidden={{this.isClosed}} {{on "click" this.menuClick}} {{on "keydown" this.menuKeyDown}}>
             {{yield}}
-            {{#if this.ready}}{{#if this.canCopy}}<button type="button" class="wx-message-copy" disabled={{this.copying}} {{on "click" this.copyBody}}>{{this.copyLabel}}</button>{{/if}}{{/if}}
-            {{#if this.copyError}}<p class="wx-message-copy-error" role="status">复制未完成，请关闭菜单后选中文字复制。</p>{{/if}}
+            {{#if this.ready}}{{#if this.canCopy}}
+              <div class="wx-message-text-tools">
+                <button type="button" class="wx-message-copy" disabled={{this.copying}} {{on "click" this.copyBody}}>{{this.copyLabel}}</button>
+                <button type="button" class="wx-message-select-text" {{on "click" this.selectText}}>选择文字</button>
+              </div>
+            {{/if}}{{/if}}
+            {{#if this.copyError}}<p class="wx-message-copy-error" role="status">复制未完成，可点“选择文字”后复制。</p>{{/if}}
           </div>
+          {{#if this.isSelecting}}<div class="wx-message-selection-tools" role="status"><span>拖动选取文字，可使用系统复制</span><button type="button" {{on "click" this.endTextSelection}}>完成</button></div>{{/if}}
         </div>
       {{else}}{{yield}}{{/if}}
     </template>
@@ -775,6 +870,7 @@ export default apiInitializer("1.0", (api) => {
     get topic() { return this.args.outletArgs.model; }
     get topics() { return this.topic?.archetype === "regular" ? [this.topic] : []; }
     get introductionUrl() { return `/t/${this.topic.slug || "topic"}/${this.topic.id}/1`; }
+    get latestUrl() { return `/t/${this.topic.slug || "topic"}/${this.topic.id}/${this.topic.highest_post_number || 1}`; }
     @action introduction(event) {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
@@ -782,6 +878,12 @@ export default apiInitializer("1.0", (api) => {
       DiscourseURL.routeTo(this.introductionUrl);
     }
     @action login() { api.container.lookup("route:application").send("showLogin"); }
+    @action latest(event) {
+      if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      this.toolsOpen = false;
+      DiscourseURL.routeTo(this.latestUrl);
+    }
     @action toggleTools() { this.toolsOpen = !this.toolsOpen; this.copied = false; }
     @action async copyTopic() {
       try { await clipboardCopy(`${window.location.origin}/t/${this.topic.slug || "topic"}/${this.topic.id}`); this.copied = true; }
@@ -789,7 +891,7 @@ export default apiInitializer("1.0", (api) => {
     }
     <template>
       <div class="wx-chat-heading"><span role="heading" aria-level="1" title={{this.topic.title}}>{{this.topic.title}}</span><button type="button" aria-label="话题更多操作" aria-expanded={{this.toolsOpen}} {{on "click" this.toggleTools}}>•••</button>
-        {{#if this.toolsOpen}}<nav class="wx-topic-menu" aria-label="话题操作"><a href={{this.introductionUrl}} {{on "click" this.introduction}}>话题说明</a><button type="button" {{on "click" this.copyTopic}}>{{if this.copied "链接已复制" "分享话题"}}</button></nav>{{/if}}
+        {{#if this.toolsOpen}}<nav class="wx-topic-menu" aria-label="话题操作"><a href={{this.introductionUrl}} {{on "click" this.introduction}}>回到开头</a><a href={{this.latestUrl}} {{on "click" this.latest}}>跳到最新</a><button type="button" {{on "click" this.copyTopic}}>{{if this.copied "链接已复制" "分享话题"}}</button></nav>{{/if}}
       </div>
       {{#each this.topics key="id" as |topic|}}
         {{#if this.currentUser}}<InlineReply @topic={{topic}} />{{else}}<div class="wx-reply-dock"><button type="button" class="wx-reply-input" {{on "click" this.login}}>登录后参与讨论</button></div>{{/if}}
@@ -813,6 +915,31 @@ export default apiInitializer("1.0", (api) => {
   });
   api.renderInOutlet("before-main-outlet", Conversations);
   api.renderInOutlet("topic-above-post-stream", ReplyDock);
+  // Only our touch messages use the native text-selection menu by itself.
+  // The core retains its usual quoting toolbar for desktop mouse selection.
+  api.modifyClass("component:post-text-selection", (Superclass) => class extends Superclass {
+    wxSuppressesToolbar(cooked) {
+      const post = cooked?.closest(".topic-post");
+      return post?.dataset.wxMessageActions === "true" && (post.dataset.wxPointerMode === "touch" || post.dataset.wxSelecting === "true");
+    }
+
+    computeCurrentCooked() {
+      const cooked = super.computeCurrentCooked();
+      return this.wxSuppressesToolbar(cooked) ? undefined : cooked;
+    }
+
+    async showToolbar(cooked) {
+      if (this.wxSuppressesToolbar(cooked)) return this.hideToolbar();
+      try {
+        await super.showToolbar(cooked);
+      } catch (error) {
+        // A touch-mode switch can clear a selection while the core awaits its
+        // fast-edit check. Only swallow that now-obsolete selection request.
+        if (!this.wxSuppressesToolbar(cooked)) throw error;
+      }
+      if (this.wxSuppressesToolbar(cooked)) await this.hideToolbar();
+    }
+  });
   api.registerValueTransformer("post-menu-buttons", ({ context }) => {
     if (context.state.nestedReplyView || !/^\/t\//.test(api.container.lookup("service:router").currentURL || "")) return;
     // Only presentation changes: the core still decides which actions exist,

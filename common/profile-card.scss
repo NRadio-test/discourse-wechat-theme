@@ -1,0 +1,54 @@
+body.wx-forum {
+  .fk-d-menu[data-identifier="usercard"] { max-width: calc(100vw - 24px); }
+  #user-card.user-card {
+    --card-width: min(336px, calc(100vw - 24px));
+    --avatar-width: 48px;
+    --avatar-margin: 0px;
+    width: var(--card-width);
+    max-width: calc(100vw - 24px);
+    border: 0;
+    border-radius: 12px !important;
+    background-color: #fff;
+    background-image: none !important;
+    color: #191919;
+    box-shadow: 0 8px 36px rgb(0 0 0 / 16%) !important;
+
+    .card-content { padding: 18px; background: transparent; }
+    .first-row { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 12px; }
+    .first-row .names { min-width: 0; margin: 0; padding: 0; }
+    .first-row .avatar, .card-huge-avatar { width: 48px; height: 48px; border-radius: 7px; }
+    .names__primary { margin: 0; font-size: 17px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+    .names__primary a { color: #191919; }
+    .names__secondary { font-size: 12px; }
+    .user-title { margin-top: 3px; font-size: 12px; color: #777; }
+    .avatar-flair { transform: scale(.6); transform-origin: bottom right; }
+    .own-avatar-pencil--icon { display: none; }
+    .usercard-controls {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: auto;
+      max-width: none;
+      margin: 4px 0 0;
+      padding: 0;
+    }
+    .usercard-controls > li { flex: 1 1 auto; min-width: 0; margin: 0; }
+    .usercard-controls button { min-width: 0; margin: 0; }
+    .usercard-controls > .wx-profile-actions { display: flex; gap: 8px; flex-basis: 100%; }
+    .wx-profile-actions > a, .wx-profile-actions > button {
+      display: flex; align-items: center; justify-content: center; flex: 1;
+      box-sizing: border-box; min-height: 40px; padding: 9px 12px;
+      border: 0; border-radius: 6px; font: inherit; font-size: 14px; text-decoration: none; cursor: pointer;
+    }
+    .wx-profile-view { background: #e6f5eb; color: #168b4f; }
+    .wx-profile-close { background: #f1f1f1; color: #555; }
+    .wx-profile-actions > :focus-visible { outline: 2px solid #168b4f; outline-offset: 2px; }
+    .bio { font-size: 13px; line-height: 1.5; max-height: 4.5em; overflow: auto; }
+  }
+}
+
+body.wx-forum:not(.staff) #user-card {
+  .metadata-row, .card-row:has(.badge-section) { display: none; }
+  .usercard-controls > li:has(.d-icon-filter) { display: none; }
+}

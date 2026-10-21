@@ -434,21 +434,7 @@ body.wx-forum.wx-topic {
     }
   }
 
-  .topic-post[data-post-number="1"] {
-    margin-bottom: 22px;
 
-    > article.boxed { padding: 14px; border-radius: 7px; }
-    .cooked {
-      font-size: 15px;
-      line-height: 1.65;
-      p { margin-bottom: 0.65em; }
-      h1, h2 { font-size: 1.2em; line-height: 1.5; margin: 1em 0 0.5em; }
-      h3, h4 { font-size: 1.05em; line-height: 1.5; margin: 0.9em 0 0.45em; }
-      ul, ol { margin-top: 0.5em; margin-bottom: 0.7em; }
-      > :first-child { margin-top: 0; }
-      > :last-child { margin-bottom: 0; }
-    }
-  }
 }
 
 @media (min-width: 900px) {
@@ -458,21 +444,12 @@ body.wx-forum.wx-topic {
   }
 }
 
-@media (max-width: 924px) {
-  body.wx-forum.wx-topic {
-    .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
-      bottom: calc(var(--wx-dock-height, 68px) + var(--wx-keyboard-offset, 0px) + 8px);
-    }
-  }
-}
-
 @media (max-width: 599px) {
   body.wx-forum.wx-topic {
     .wx-reply-dock { padding-left: 10px; padding-right: 10px; }
     .wx-reply-dock .docked-composer .d-editor-textarea-column { gap: 7px; }
     .wx-attach, .wx-attach button { flex-basis: 36px; width: 36px; }
     .wx-send { min-width: 56px; padding-left: 12px; padding-right: 12px; }
-    .topic-post[data-post-number="1"] > article.boxed { padding: 12px; }
     .topic-post .post-controls button { min-height: 36px; }
   }
 }

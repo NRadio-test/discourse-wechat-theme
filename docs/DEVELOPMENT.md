@@ -13,9 +13,11 @@ common/
   inline-chat.scss
   message-actions.scss
   topic-groups.scss
+  profile-card.scss
   common.scss
 javascripts/discourse/api-initializers/wechat.gjs
 javascripts/discourse/api-initializers/topic-groups.gjs
+javascripts/discourse/api-initializers/profile-card.gjs
 scripts/build-css.mjs
 tests/inline-reply.test.mjs
 tests/message-actions.test.mjs
@@ -24,13 +26,13 @@ tests/server/
 docs/
 ```
 
-`common/common.scss` 是发布用生成文件，按 `shell.scss`、`chat.scss`、`inline-chat.scss`、`message-actions.scss`、`topic-groups.scss` 的顺序拼接。修改源文件后重新生成并一并提交，不要只修改生成文件。`node scripts/build-css.mjs --check` 只检查内容是否一致，不改写文件。
+`common/common.scss` 是发布用生成文件，按 `shell.scss`、`chat.scss`、`inline-chat.scss`、`message-actions.scss`、`topic-groups.scss`、`profile-card.scss` 的顺序拼接。修改源文件后重新生成并一并提交，不要只修改生成文件。`node scripts/build-css.mjs --check` 只检查内容是否一致，不改写文件。
 
-两个 initializer 均包含内联 `<template>`，必须以 `.gjs` 编译。将后缀改为 `.js` 会破坏编译。
+三个 initializer 均包含内联 `<template>`，必须以 `.gjs` 编译。将后缀改为 `.js` 会破坏编译。
 
 ## 本地准备
 
-准备 Git、Node.js 22，以及一个可自由重置的 Discourse 测试站点。当前 1.2.0 主题的接口基线是 Discourse 2026.7.3；维护其他版本前应先确认 `DockedComposer`、outlet 和帖子模型接口。
+准备 Git、Node.js 22，以及一个可自由重置的 Discourse 测试站点。当前 1.2.1 主题的接口基线是 Discourse 2026.7.3；维护其他版本前应先确认 `DockedComposer`、outlet 和帖子模型接口。
 
 ```sh
 git clone https://github.com/NRadio-test/discourse-wechat-theme.git
@@ -79,6 +81,9 @@ node --test tests/*.test.mjs
 - 底部输入：复用 Discourse 的 `DockedComposer`，通过原生帖子模型提交。
 - 普通回复接管：主题拦截适用话题的回复入口；编辑、私信和特殊管理流程保持明确边界。
 - 消息操作：包装原生帖子菜单，提供长按、右键和替代按钮入口；动作及权限沿用核心，菜单不可用时保留可访问的原生入口。
+- 选字模式：触摸默认禁止气泡选字，显式选择文字时恢复当前气泡的原生选择；论坛引用工具条在这两种触摸路径下都不出现，桌面选字仍可使用原生引用。
+- 资料卡：`profile-card.gjs` 在核心卡片 outlet 内提供查看资料、关闭；样式缩小头像并隐藏普通用户不需要的统计、徽章和按作者筛选入口。隐私/账号状态、取消筛选和管理操作保留。
+- 阅读导航：顶部「•••」提供开头和最新消息；隐藏的是原生楼层浮标，不改变阅读进度数据。
 - 创建话题：`topic-groups.gjs` 提供话题名、可选开场内容和图片。分类使用后台默认值，标签不进入普通用户表单；无内容或附件时用话题名作为首帖。1.2.0 已实现，真机验收范围见下文。
 - 原生新建拦截仅限会话界面；后台和独立分类页面保留原生创建上下文，避免把私有分类的创建操作悄悄改成公开讨论。
 
@@ -107,7 +112,9 @@ node scripts/build-css.mjs --check
 node --test tests/*.test.mjs
 ```
 
-1.2.0 共 41 项：回复 10 项覆盖重复点击、A→B→A 切换、成功与失败清稿、图片单独发送及输入法状态；菜单 19 项覆盖入口、手势边界、原生动作、权限与销毁；创建 12 项覆盖输入校验、草稿、上传、重复提交及响应处理。
+1.2.1 共 53 项：回复 10 项覆盖重复点击、A→B→A 切换、成功与失败清稿、图片单独发送及输入法状态；菜单 31 项覆盖入口、手势边界、原生动作、权限与销毁，以及触摸选字、异步引用工具条竞态和核心重绘；创建 12 项覆盖输入校验、草稿、上传、重复提交及响应处理。
+
+核心会重新渲染帖子的完整 `class` 属性。消息模式使用独立 `data-wx-*` 属性保存状态，不能把 `classList.add()` 的结果当成持久标记。销毁时删除主题自己的属性及监听器，不修改核心类名。
 
 测试读取本仓库的真实主题方法，通过最小协作对象检验状态与调用约定。回复测试默认使用独立编写的最小 Composer 适配器，它只表达提交、清稿和键盘行为约定，**不是 Discourse 核心组件实现**。这些回归可以验证主题状态逻辑，但不能证明核心接口、Glimmer 编译、上传或实际 DOM 行为兼容。
 
@@ -124,6 +131,8 @@ DISCOURSE_SOURCE=/path/to/discourse node --test tests/inline-reply.test.mjs
 GitHub Actions 在 `pull_request` 和 `main` 分支推送时使用 Node.js 22 检查生成 CSS 和行为测试。工作流只有 `contents: read` 权限，不接收部署凭据，也不自动发布或修改生产站点。
 
 1.2.0 的运行站点 GJS 编译检查为零错误。桌面浏览器已验证右键原生菜单、收藏子菜单、回复定位底部输入区、创建框隐藏分类与标签、创建草稿关闭后恢复。直接访问 `/new-topic` 可在话题列表背景上保留简洁创建框；已检查 390×844 手机模拟视口的创建面板。真实手机微信的长按、滚动、选字、图片操作及软键盘尚未验收。
+
+1.2.1 在同一 Discourse 版本编译为零错误，53 项行为测试通过。实际页面检查了 390×844 和 1280×900 视口：紧凑气泡、裸链接无白底、无横向溢出、小型资料卡及关闭、右键消息菜单、回复定位底部输入栏、取消引用、选字模式进入/退出与最新消息导航。选字时消息菜单关闭，未出现论坛引用工具条；控制台未见警告或错误。本轮未向生产站点发送测试内容。真实微信的长按及系统选字手柄仍需设备复验。
 
 浏览器验证至少包括：
 

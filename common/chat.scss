@@ -1,62 +1,38 @@
-// Chat presentation only. Keep the native stream, its document scrolling,
-// controls, and composer intact so reading progress and moderation still work.
+// Keep the native post stream and its document scrolling. Only message
+// presentation changes; quoted/hidden posts, permissions and reading stay core.
 body.wx-forum.wx-topic {
   --wx-chat-background: #ededed;
   --wx-chat-bubble: #fff;
   --wx-chat-own-bubble: #95ec69;
   --wx-chat-text: #191919;
-  --wx-chat-muted: #777;
+  --wx-chat-muted: #999;
   --wx-chat-avatar-size: 40px;
-  --wx-chat-avatar-gap: 12px;
+  --wx-chat-avatar-gap: 10px;
   --topic-avatar-width: var(--wx-chat-avatar-size);
   --topic-body-width-padding: 0px;
 
   background: var(--wx-chat-background);
 
   #main-outlet > .regular,
-  #main-outlet > .private_message,
-  .container.posts,
-  .posts-wrapper,
-  .post-stream {
+  #main-outlet > .private_message {
+    padding-bottom: 0;
     background: transparent;
   }
 
-  #topic-title {
-    margin: 0 0 20px;
-    padding: 18px 0 16px;
-    border-bottom: 1px solid #dcdcdc;
-
-    .title-wrapper {
-      width: 100%;
-      min-width: 0;
-    }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 20px;
-      line-height: 1.5;
-      font-weight: 600;
-      overflow-wrap: anywhere;
-    }
-
-    .fancy-title {
-      color: var(--wx-chat-text);
-    }
-
-    .topic-category {
-      font-size: 12px;
-    }
-  }
+  // The conversation heading already lives in the fixed header. An otherwise
+  // empty core title container must not leave 44px of padding above messages.
+  #topic-title { margin: 0; padding: 0; border: 0; }
+  &:not(.staff) #topic-title { display: none; }
 
   .container.posts {
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
     min-width: 0;
-    padding-bottom: calc(var(--wx-reply-dock-height, 64px) + 20px);
+    margin: 0;
+    padding: 16px 0 calc(var(--wx-dock-height, 68px) + 20px);
+    background: transparent;
 
-    > .row {
-      width: 100%;
-      max-width: 100%;
-    }
+    > .row { width: 100%; max-width: 100%; }
   }
 
   .topic-area,
@@ -64,15 +40,23 @@ body.wx-forum.wx-topic {
   .post-stream {
     width: 100%;
     min-width: 0;
+    background: transparent;
   }
 
+  // First/latest navigation is available in the conversation's more menu.
+  // This removes only the floating floor counter/timeline, not reading state.
+  .container.posts > .topic-navigation { display: none; }
+
   .topic-post {
-    margin: 0 0 20px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
 
     > article.boxed {
       margin: 0;
       padding: 0;
       border: 0;
+      border-radius: 0;
       background: transparent;
       box-shadow: none;
     }
@@ -81,7 +65,12 @@ body.wx-forum.wx-topic {
       display: flex;
       align-items: flex-start;
       gap: var(--wx-chat-avatar-gap);
+      width: 100%;
       margin: 0;
+      padding: 0;
+
+      // Core's clearfix pseudo-elements otherwise become extra flex items.
+      &::before, &::after { display: none; }
     }
 
     .post__row > .topic-avatar {
@@ -89,22 +78,25 @@ body.wx-forum.wx-topic {
       float: none;
       flex: 0 0 var(--wx-chat-avatar-size);
       width: var(--wx-chat-avatar-size);
+      height: var(--wx-chat-avatar-size);
       padding: 0;
       margin: 0;
       border: 0;
 
       .avatar {
+        display: block;
         width: var(--wx-chat-avatar-size);
         height: var(--wx-chat-avatar-size);
-        border-radius: 6px;
+        border-radius: 5px;
       }
     }
 
     .post__row > .topic-body {
       float: none;
-      flex: 0 1 680px;
-      width: calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap));
-      max-width: calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap));
+      flex: 0 1 auto;
+      box-sizing: border-box;
+      width: max-content;
+      max-width: min(680px, calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap) - 28px));
       min-width: 0;
       padding: 0;
       margin: 0;
@@ -115,322 +107,144 @@ body.wx-forum.wx-topic {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 4px 10px;
-      min-height: 20px;
-      margin: 0 0 5px;
+      gap: 2px 8px;
+      min-height: 0;
+      margin: 0 0 4px;
       padding: 0;
-      font-size: 12px;
-      line-height: 1.4;
       color: var(--wx-chat-muted);
+      font-size: 12px;
+      line-height: 16px;
 
-      .names {
-        min-width: 0;
-        margin: 0;
-      }
-
-      .names > span {
-        font-size: 12px;
-        vertical-align: baseline;
-      }
-
-      .names span.first {
-        font-weight: 400;
-      }
-
+      .names { min-width: 0; margin: 0; }
+      .names > span { margin: 0; font-size: 12px; vertical-align: baseline; }
+      .names span.first { font-weight: 400; }
       .names:has(.first.full-name) .second.username { display: none; }
+      .names a { color: var(--wx-chat-muted); }
+      .post-infos { gap: 2px; margin: 0; min-width: 0; font-size: 11px; }
 
-      .names a,
-      .post-date {
-        color: var(--wx-chat-muted);
-      }
-
-      .post-infos {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 2px;
-        min-width: 0;
-        margin-left: auto;
-        font-size: 11px;
-      }
+      // Dates remain in the accessible post heading and native sharing data.
+      // Repeating “1 minute” above every chat bubble adds no useful hierarchy.
+      .post-date, .read-state { display: none; }
     }
 
-    .post__contents {
-      min-width: 0;
-      padding: 0;
-    }
+    .post__contents { min-width: 0; padding: 0; clear: none; }
 
-    .cooked {
+    .post__contents > .cooked {
+      position: relative;
       box-sizing: border-box;
       width: fit-content;
       max-width: 100%;
       min-width: 36px;
-      padding: 11px 14px;
+      padding: 10px 12px;
       margin: 0;
-      border-radius: 4px 9px 9px;
+      border: 0;
+      border-radius: 5px;
       background: var(--wx-chat-bubble);
       color: var(--wx-chat-text);
-      font-size: 15px;
-      line-height: 1.65;
+      font-size: 16px;
+      line-height: 1.5;
       overflow-wrap: anywhere;
-      box-shadow: 0 1px 1px rgb(0 0 0 / 3%);
+      box-shadow: none;
 
+      &::before {
+        content: "";
+        position: absolute;
+        top: 14px;
+        left: -4px;
+        width: 8px;
+        height: 8px;
+        background: inherit;
+        transform: rotate(45deg);
+      }
+
+      p { margin: 0 0 .55em; }
       > :first-child { margin-top: 0; }
-      > :last-child { margin-bottom: 0; }
-      p { margin: 0 0 0.75em; }
+      // Core appends a selection barrier after the actual final paragraph.
+      > :last-child,
+      > :has(+ .cooked-selection-barrier) { margin-bottom: 0; }
       a { color: #476b93; }
 
-      img:not(.emoji),
-      video,
-      iframe,
-      .lightbox-wrapper,
-      .lightbox-wrapper .lightbox {
+      img:not(.emoji), video, iframe,
+      .lightbox-wrapper, .lightbox-wrapper .lightbox {
         max-width: 100%;
         border-radius: 4px;
       }
-
       img:not(.emoji) { height: auto; }
-
-      pre,
-      .md-table,
-      .md-table table {
+      pre, .md-table, .md-table table { max-width: 100%; overflow-x: auto; }
+      pre { padding: 10px; border-radius: 4px; background: rgb(0 0 0 / 5%); font-size: 13px; }
+      h1, h2 { font-size: 1.2em; line-height: 1.5; margin: .9em 0 .45em; }
+      h3, h4 { font-size: 1.05em; line-height: 1.5; margin: .8em 0 .4em; }
+      ul, ol { margin-top: .45em; margin-bottom: .6em; }
+      blockquote, aside.quote {
         max-width: 100%;
-        overflow-x: auto;
-      }
-
-      pre {
-        padding: 10px;
-        border-radius: 4px;
-        background: rgb(0 0 0 / 5%);
-        font-size: 13px;
-      }
-
-      blockquote,
-      aside.quote {
-        max-width: 100%;
-        margin: 0.75em 0;
+        margin: .6em 0;
         border-radius: 4px;
         border-left: 3px solid #c8c8c8;
         background: rgb(0 0 0 / 4%);
         color: #555;
         font-size: 13px;
       }
-
-      aside.quote .title {
-        padding: 7px 10px;
-        background: rgb(0 0 0 / 3%);
-      }
-
-      aside.quote blockquote {
-        border-left: 0;
-        margin: 0;
-        background: transparent;
-      }
-
-      .onebox {
+      aside.quote .title { padding: 7px 10px; background: rgb(0 0 0 / 3%); }
+      aside.quote blockquote { border-left: 0; margin: 0; background: transparent; }
+      aside.onebox {
         width: auto;
         min-width: 0;
         max-width: 100%;
         margin: 8px 0;
         padding: 10px;
-        border-radius: 5px;
+        border-radius: 4px;
         background: rgb(255 255 255 / 70%);
       }
+      // An unresolved onebox is just an <a>, not a preview card. Giving it
+      // card padding/background creates the pale rectangles seen on mobile.
+      a.onebox { display: inline; margin: 0; padding: 0; border: 0; background: transparent; }
     }
 
-    .post-menu-area {
-      margin: 4px 0 0;
-      padding: 0;
-    }
-
+    .post-menu-area { margin: 0; padding: 0; }
     .post-controls {
       min-width: 0;
       padding: 0;
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 1px;
-      }
-
-      button {
-        min-height: 30px;
-        padding: 5px 7px;
-        border-radius: 4px;
-      }
-
+      .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; }
+      button { min-height: 30px; padding: 5px 7px; border-radius: 4px; }
       .fade-out { opacity: 1; }
     }
-
-    .post-actions,
-    .post-links-container {
-      padding: 0;
-      font-size: 12px;
-    }
-
-    .embedded-posts {
-      box-sizing: border-box;
-      max-width: 100%;
-      margin-top: 8px;
-      border-radius: 5px;
-      background: rgb(255 255 255 / 60%);
-    }
+    .post-actions, .post-links-container { margin: 4px 0 0; padding: 0; font-size: 12px; }
+    .post-actions:not(:has(*)), .post-links-container:not(:has(*)) { display: none; margin: 0; }
+    .embedded-posts { box-sizing: border-box; max-width: 100%; margin-top: 8px; border-radius: 5px; background: rgb(255 255 255 / 60%); }
   }
 
-  // Mirror just the current user's outer message; quoted replies stay readable.
-  .topic-post.post--current-user:not([data-post-number="1"]) {
+  // The opening message uses exactly the same structure and sizing as replies.
+  .topic-post.post--current-user {
     .post__row:has(> .topic-avatar) { flex-direction: row-reverse; }
-    .topic-meta-data .names { flex: 0 1 auto; margin-left: auto; }
-    .topic-meta-data .post-infos { margin-left: 0; }
-
+    .topic-meta-data { margin-bottom: 0; justify-content: flex-end; }
+    .topic-meta-data .names { display: none; }
     .post__row > .topic-body > .post__contents > .cooked {
       margin-left: auto;
-      border-radius: 9px 4px 9px 9px;
       background: var(--wx-chat-own-bubble);
+      &::before { left: auto; right: -4px; }
     }
   }
 
-  // The first post is the discussion brief, not a message from a private chat.
-  .topic-post[data-post-number="1"] {
-    margin-bottom: 28px;
+  &:not(.staff) .topic-meta-data .edits { display: none; }
+  .topic-post.post--selected > article.boxed { outline: 2px solid #07a451; outline-offset: 4px; }
+  .topic-post.post--whisper .cooked { border: 1px dashed #aaa; }
+  .topic-post.post--moderator .cooked { background: #fff4dc; }
+  .topic-post.post--deleted .cooked { background: #f8e5e3; }
 
-    > article.boxed {
-      padding: 18px;
-      border: 1px solid #e2e2e2;
-      border-radius: 8px;
-      background: #fff;
-    }
+  .small-action, .time-gap, .topic-status-info, .topic-timer-info { max-width: 100%; color: #999; font-size: 12px; }
+  .small-action.topic-post-visited .topic-post-visited-line { border: 0; width: 100%; margin: 8px 0 16px; }
+  .small-action.topic-post-visited .topic-post-visited-message { background: transparent; color: #999; }
+  .time-gap .small-action-desc { padding: 8px 0 16px; text-align: center; font-weight: 400; }
+  .topic-footer-main-buttons, .topic-footer-buttons { max-width: 100%; }
 
-    .post__row > .topic-body { flex-grow: 1; }
-
-    .cooked {
-      width: 100%;
-      margin: 0;
-      padding: 6px 0;
-      background: transparent;
-      box-shadow: none;
-    }
-
-    .topic-map {
-      width: 100%;
-      max-width: 100%;
-      margin-top: 14px;
-      border-radius: 5px;
-      font-size: 12px;
-    }
-  }
-
-  .topic-post.post--selected > article.boxed {
-    outline: 2px solid #07c160;
-    outline-offset: 5px;
-  }
-
-  .topic-post.post--whisper .cooked {
-    border: 1px dashed #aaa;
-  }
-
-  .small-action,
-  .time-gap,
-  .topic-status-info,
-  .topic-timer-info {
-    max-width: 100%;
-    color: var(--wx-chat-muted);
-    font-size: 12px;
-  }
-
-  .topic-footer-main-buttons,
-  .topic-footer-buttons {
-    max-width: 100%;
-  }
-
-  #topic-progress {
-    border-radius: 6px;
-    overflow: hidden;
-    font-size: 12px;
-  }
-
-  // Do not cover the native composer, or remove its draft/preview controls.
   &:has(#reply-control.open) .wx-reply-dock,
-  &.composer-open .wx-reply-dock {
-    display: none;
-  }
-}
-
-// The native timeline switches at 925px, independently of the 900px shell.
-@media (min-width: 925px) {
-  body.wx-forum.wx-topic {
-    .container.posts { grid-template-columns: minmax(0, 1fr) 88px; }
-
-    .container.posts > .topic-navigation {
-      top: calc(var(--header-offset, 54px) + 16px);
-      margin-left: 12px;
-      font-size: 12px;
-    }
-
-    .timeline-container:not(.timeline-fullscreen) {
-      width: 76px;
-
-      .topic-timeline { min-width: 0; }
-      .timeline-controls { flex-wrap: wrap; gap: 4px; }
-      .timeline-footer-controls { max-width: 76px; }
-      .timeline-date-wrapper { overflow-wrap: anywhere; }
-      .timeline-scroller-content { padding-left: 10px; }
-    }
-  }
-}
-
-@media (max-width: 924px) {
-  body.wx-forum.wx-topic {
-    .container.posts { grid-template-columns: minmax(0, 1fr); }
-
-    // Keep the built-in progress/jump button available above the input dock.
-    .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
-      bottom: calc(var(--wx-reply-dock-height, 64px) + env(safe-area-inset-bottom) + 8px);
-    }
-
-    &:has(#reply-control.open) .topic-navigation.with-topic-progress:not(.topic-progress-expanded) {
-      bottom: var(--composer-height, 0px);
-    }
-
-    #topic-progress-wrapper #topic-progress {
-      padding: 7px 11px;
-
-      .nums { font-size: 12px; }
-    }
-  }
+  &.composer-open .wx-reply-dock { display: none; }
 }
 
 @media (max-width: 599px) {
   body.wx-forum.wx-topic {
-    --wx-chat-avatar-size: 34px;
-    --wx-chat-avatar-gap: 9px;
-
-    #topic-title {
-      padding-top: 12px;
-      margin-bottom: 16px;
-
-      h1 { font-size: 17px; }
-    }
-
-    .topic-post {
-      margin-bottom: 18px;
-
-      .topic-meta-data { gap: 3px 6px; }
-      .topic-meta-data .names > span { font-size: 11px; }
-      .topic-meta-data .post-infos { font-size: 10px; }
-      .cooked { padding: 9px 11px; font-size: 15px; }
-      .post-controls button { min-height: 32px; padding: 5px 6px; }
-    }
-
-    .topic-post[data-post-number="1"] {
-      > article.boxed { padding: 12px; }
-      .cooked { padding: 5px 0; }
-      .topic-map { margin-left: 0; }
-    }
+    .container.posts { padding-top: 14px; }
+    .topic-post { margin-bottom: 16px; }
+    .topic-post .post-controls button { min-height: 32px; padding: 5px 6px; }
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body.wx-forum.wx-topic .topic-timeline { transition: none; }
 }
