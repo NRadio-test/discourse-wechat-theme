@@ -194,6 +194,34 @@ function makeHarness() {
   return { create, destroy, dock, keydown, succeed, requests, created, events, pendingReplies, values, keyValueStore, controller };
 }
 
+test("inline edit preserves the reply draft and blocks sending it until edit closes", async () => {
+  const h = makeHarness(), a = h.create(); a.element = {};
+  const { core } = h.dock(a, { raw: "未发出的回复", uploads: [{ markdown: "图片" }] });
+  const request = { post: { id: 4, topic_id: 1, post_type: 1, can_edit: true } };
+  a.selectEdit(request);
+  assert.equal(request.handled, true);
+  assert.equal(a.editPost, request.post);
+  await core.submit();
+  assert.equal(h.requests.length, 0);
+  a.closeEdit();
+  assert.equal(core.reply, "未发出的回复");
+  assert.equal(core.uploads.length, 1);
+  assert.equal(h.values.get(a.draftKey), "未发出的回复");
+});
+
+test("inline edit respects permissions, topic scope and an existing edit", () => {
+  const h = makeHarness(), a = h.create(); a.element = {};
+  for (const fields of [{ can_edit: false }, { topic_id: 2 }, { post_type: 4 }, { is_localized: true }]) {
+    const request = { post: { id: 4, topic_id: 1, post_type: 1, can_edit: true, ...fields } };
+    a.selectEdit(request); assert.equal(request.handled, undefined);
+  }
+  const first = { post: { id: 4, topic_id: 1, post_type: 1, can_edit: true } };
+  a.selectEdit(first);
+  const second = { post: { ...first.post, id: 5 } }; a.selectEdit(second);
+  assert.equal(second.handled, true);
+  assert.equal(a.editPost.id, 4);
+});
+
 test("rapid clicks share one synchronous submission lock", async () => {
   const h = makeHarness(), a = h.create();
   h.values.set(a.draftKey, "原消息");

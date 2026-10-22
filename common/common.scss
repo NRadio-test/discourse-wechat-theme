@@ -399,6 +399,14 @@ body:not(.staff) .alert-emails-disabled { display: none; }
 // Embed the reusable DockedComposer. The Discourse stream keeps its normal
 // document scrolling; only the dock follows the mobile visual viewport.
 body.wx-forum.wx-topic {
+  .wx-reply-normal[hidden] { display: none !important; }
+  .wx-message-edit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .wx-edit-heading { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; color: #666; font-size: 13px; }
+  .wx-edit-heading button { border: 0; background: transparent; color: #555; padding: 8px 12px; }
+  .wx-message-edit .wx-send-error { grid-column: 1 / -1; }
+  .wx-edit-input { box-sizing: border-box; width: 100%; min-height: 90px; max-height: 28dvh; margin: 0; padding: 10px; resize: vertical; border: 1px solid #ddd; border-radius: 6px; background: #fff; color: #222; font: inherit; font-size: 16px; }
+  .wx-edit-save { align-self: end; min-height: 42px; padding: 8px 16px; border: 0; border-radius: 6px; background: #07a54f; color: white; font: inherit; }
+  .wx-edit-save:disabled { opacity: .5; }
   --wx-dock-height: 68px;
   --wx-keyboard-offset: 0px;
 

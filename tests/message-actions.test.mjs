@@ -155,6 +155,27 @@ test("short tap and touch scrolling never open the menu", () => {
   assert.equal(h.document.count(), 0);
 });
 
+test("only a completed hold cancels the touch release, never taps, scrolling or explicit selection", () => {
+  const h = harness(), { instance, text, post } = h.create();
+  const tap = h.key(text); instance.heldTouchEnd(tap); assert.equal(tap.prevented, false);
+  instance.pointerDown(h.pointer(text)); h.advance(480);
+  Object.assign(h.selection, { anchorNode: post, focusNode: post, isCollapsed: true });
+  const held = h.key(text); instance.heldTouchEnd(held);
+  assert.equal(held.prevented, true); assert.equal(h.selection.anchorNode, null);
+  instance.selectText();
+  const selecting = h.key(text); instance.heldTouchEnd(selecting); assert.equal(selecting.prevented, false);
+  instance.endTextSelection();
+  instance.pointerDown(h.pointer(text)); instance.pointerMove(h.pointer(text, { clientY: 400 }));
+  const scroll = h.key(text); instance.heldTouchEnd(scroll); assert.equal(scroll.prevented, false);
+});
+
+test("touch menu labels do not open a second native context menu", () => {
+  const h = harness({ coarsePointer: true }), { instance, reply } = h.create();
+  instance.openMenu(); const context = h.key(reply); instance.contextMenu(context);
+  assert.equal(context.prevented, true);
+  assert.equal(instance.isOpen, true);
+});
+
 test("a stationary hold opens once and suppresses only its follow-up text click", () => {
   const h = harness(), { instance, text, bubble } = h.create();
   instance.pointerDown(h.pointer(text));

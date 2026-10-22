@@ -10,6 +10,7 @@ import willDestroy from "@ember/render-modifiers/modifiers/will-destroy";
 import DockedComposer from "discourse/components/docked-composer";
 import DButton from "discourse/ui-kit/d-button";
 import { extractError } from "discourse/lib/ajax-error";
+import { ajax } from "discourse/lib/ajax";
 import { getUploadMarkdown } from "discourse/lib/uploads";
 import { apiInitializer } from "discourse/lib/api";
 import DiscourseURL from "discourse/lib/url";
@@ -277,6 +278,10 @@ export default apiInitializer("1.0", (api) => {
       this.postElement.addEventListener("keydown", this.postKeyDown);
       this.postElement.addEventListener("click", this.suppressHeldClick, true);
       this.postElement.addEventListener("selectstart", this.selectionStart);
+      this.postElement.addEventListener("touchend", this.heldTouchEnd, { passive: false });
+      // Core DButton actions may stop bubbling; observe without cancelling
+      // during capture, then close after the native action has dispatched.
+      this.menu.addEventListener("click", this.menuClick, true);
       this.ready = true;
     }
 
@@ -296,6 +301,8 @@ export default apiInitializer("1.0", (api) => {
       this.postElement?.removeEventListener("keydown", this.postKeyDown);
       this.postElement?.removeEventListener("click", this.suppressHeldClick, true);
       this.postElement?.removeEventListener("selectstart", this.selectionStart);
+      this.postElement?.removeEventListener("touchend", this.heldTouchEnd);
+      this.menu?.removeEventListener("click", this.menuClick, true);
       this.element = this.postElement = this.bubble = this.menu = null;
       if (!this.isDestroying && !this.isDestroyed) this.ready = false;
     }
@@ -324,7 +331,7 @@ export default apiInitializer("1.0", (api) => {
       // A collapsed range or whitespace can still leave native selection
       // handles. Only clear ranges belonging to this message or its menu.
       if (selection && [selection.anchorNode, selection.focusNode].some((node) =>
-        node && (this.bubble?.contains(node) || this.menu?.contains(node)) &&
+        node && this.postElement?.contains(node) &&
         !(node.nodeType === 3 ? node.parentElement : node).closest?.("input, textarea, [contenteditable]"))) {
         selection.removeAllRanges();
       }
@@ -342,6 +349,16 @@ export default apiInitializer("1.0", (api) => {
       // Listen only during our gesture/menu, never during explicit selection.
       if (!this.isSelecting && (this.press || this.isOpen) &&
           ["touch", "pen"].includes(this.lastPointerType)) this.clearBubbleSelection();
+    }
+
+    @action heldTouchEnd(event) {
+      // Cancel only the release of a completed hold. Short taps, scrolling and
+      // explicit text selection keep their native touch behavior.
+      if (this.isOpen && !this.isSelecting && Date.now() < this.suppressClickUntil &&
+          this.eligibleTarget(event.target)) {
+        event.preventDefault();
+        this.clearBubbleSelection();
+      }
     }
 
     hasSelectedText() {
@@ -403,6 +420,12 @@ export default apiInitializer("1.0", (api) => {
     }
 
     @action contextMenu(event) {
+      if (this.menu?.contains(event.target) && ["touch", "pen"].includes(this.lastPointerType) &&
+          !event.target.closest?.("input, textarea, [contenteditable]")) {
+        event.preventDefault();
+        this.clearBubbleSelection();
+        return;
+      }
       if (!this.eligibleTarget(event.target)) return;
       const touch = ["touch", "pen"].includes(event.pointerType || this.lastPointerType);
       // Explicit selection gets only the operating system's native menu.
@@ -627,7 +650,7 @@ export default apiInitializer("1.0", (api) => {
       {{#if this.enabled}}
         <div class={{if this.ready "wx-message-actions is-enhanced" "wx-message-actions"}} {{didInsert this.setup}} {{willDestroy this.teardown}}>
           <button type="button" class="wx-message-actions-trigger" hidden={{this.triggerHidden}} aria-label={{this.triggerLabel}} aria-haspopup="dialog" aria-controls={{this.menuId}} aria-expanded={{this.isOpen}} {{on "click" this.toggleMenu}}>•••</button>
-          <div id={{this.menuId}} class="wx-message-actions-popover" role={{if this.ready "dialog"}} aria-label="消息操作" tabindex="-1" hidden={{this.isClosed}} {{on "click" this.menuClick}} {{on "keydown" this.menuKeyDown}}>
+          <div id={{this.menuId}} class="wx-message-actions-popover" role={{if this.ready "dialog"}} aria-label="消息操作" tabindex="-1" hidden={{this.isClosed}} {{on "keydown" this.menuKeyDown}}>
             {{yield}}
             {{#if this.ready}}{{#if this.canCopy}}
               <div class="wx-message-text-tools">
@@ -644,6 +667,66 @@ export default apiInitializer("1.0", (api) => {
     </template>
   }
 
+  class MessageEdit extends Component {
+    @tracked raw = "";
+    @tracked loading = true;
+    @tracked saving = false;
+    @tracked error = "";
+    element = null;
+    get disabled() { return this.loading || this.saving || !this.raw.trim(); }
+    constructor() {
+      super(...arguments);
+      this.load();
+    }
+    async load() {
+      try {
+        const result = await ajax(`/posts/${this.args.post.id}.json`);
+        if (this.isDestroying || this.isDestroyed) return;
+        if (typeof result.raw !== "string") throw new Error("消息正文不可用，请取消后重试。");
+        this.raw = result.raw;
+        this.loading = false;
+      } catch (error) {
+        if (!this.isDestroying && !this.isDestroyed) {
+          this.error = extractError(error, "消息加载失败，请取消后重试。");
+        }
+      }
+    }
+    @action setup(element) { this.element = element; }
+    @action input(event) { if (!this.saving) this.raw = event.target.value; }
+    @action cancel() { if (!this.saving) this.args.onClose(); }
+    @action async save() {
+      if (this.disabled) return;
+      this.saving = true;
+      this.error = "";
+      let result;
+      try {
+        result = await ajax(`/posts/${this.args.post.id}.json`, {
+          type: "PUT", data: { post: { raw: this.raw } },
+        });
+      } catch (error) {
+        if (!this.isDestroying && !this.isDestroyed) {
+          this.saving = false;
+          this.error = extractError(error, "保存失败，修改内容已保留。");
+        }
+        return;
+      }
+      // The server has accepted the edit. Refresh display without mutating the
+      // original post before success or presenting a failed-save retry afterward.
+      if (result.post) this.args.post.setProperties(result.post);
+      if (!this.isDestroying && !this.isDestroyed) this.args.onClose();
+    }
+    <template>
+      <div class="wx-message-edit" {{didInsert this.setup}}>
+        <div class="wx-edit-heading"><span>编辑消息</span><button type="button" disabled={{this.saving}} {{on "click" this.cancel}}>取消</button></div>
+        {{#if this.error}}<div class="wx-send-error" role="alert">{{this.error}}</div>{{/if}}
+        {{#if this.loading}}{{#unless this.error}}<p role="status">正在读取消息…</p>{{/unless}}{{else}}
+          <textarea class="wx-edit-input" aria-label="编辑消息内容" value={{this.raw}} readonly={{this.saving}} {{on "input" this.input}}></textarea>
+          <button type="button" class="wx-edit-save" disabled={{this.disabled}} {{on "click" this.save}}>{{if this.saving "保存中…" "保存"}}</button>
+        {{/if}}
+      </div>
+    </template>
+  }
+
   class InlineReply extends Component {
     @service currentUser;
     @service store;
@@ -653,6 +736,7 @@ export default apiInitializer("1.0", (api) => {
     @tracked error = "";
     @tracked notice = "";
     @tracked replyContext = null;
+    @tracked editPost = null;
     @tracked composerRevision = 0;
     @tracked narrow = window.innerWidth < 900;
     openedAt = Date.now();
@@ -676,10 +760,12 @@ export default apiInitializer("1.0", (api) => {
       this.sending = pendingReplies.has(this.draftKey);
       try { this.replyContext = JSON.parse(this.keyValueStore.get(this.contextKey) || "null"); } catch { /* Ignore a damaged local draft context. */ }
       this.appEvents.on("wx:reply-to-post", this, this.selectReply);
+      this.appEvents.on("topic:edit-post", this, this.selectEdit);
       this.appEvents.on("topic:quote-post", this, this.selectQuote);
       this.appEvents.on("wx:reply-send-finished", this, this.sendFinished);
       registerDestructor(this, () => {
         this.appEvents.off("wx:reply-to-post", this, this.selectReply);
+        this.appEvents.off("topic:edit-post", this, this.selectEdit);
         this.appEvents.off("topic:quote-post", this, this.selectQuote);
         this.appEvents.off("wx:reply-send-finished", this, this.sendFinished);
         this.resizeObserver?.disconnect();
@@ -766,12 +852,21 @@ export default apiInitializer("1.0", (api) => {
       this.element?.querySelectorAll("input[type=file]").forEach((fileInput) => { fileInput.disabled = locked; });
     }
 
+    @action selectEdit(request) {
+      const post = request.post;
+      if (post?.topic_id !== this.topic.id || post.post_type !== 1 || !post.can_edit || post.is_localized || !this.element) return;
+      request.handled = true;
+      if (this.sending || this.editPost) return;
+      this.editPost = post;
+    }
+    @action closeEdit() { this.editPost = null; }
+
     @action selectReply(request) {
       if (request.topic?.id !== this.topic.id || !this.canReply || !this.element) return;
       request.handled = true;
       api.container.lookup("controller:topic").quoteState?.clear();
       // Busy replies still belong to this dock; never fall back to the old editor.
-      if (this.sending) return;
+      if (this.sending || this.editPost) return;
       const post = request.post;
       this.replyContext = post ? {
         id: post.id, postNumber: post.post_number,
@@ -835,7 +930,7 @@ export default apiInitializer("1.0", (api) => {
 
     @action async submit({ raw, uploads, inProgressUploadsCount }) {
       // Synchronous lock also covers rapid clicks before a Glimmer re-render.
-      if (this.sending || pendingReplies.has(this.draftKey) || inProgressUploadsCount || !this.canReply) return false;
+      if (this.editPost || this.sending || pendingReplies.has(this.draftKey) || inProgressUploadsCount || !this.canReply) return false;
       const body = [raw.trim(), ...uploads.map((upload) => getUploadMarkdown(upload))].filter(Boolean).join("\n\n");
       if (!body) return false;
       const pending = {
@@ -882,6 +977,8 @@ export default apiInitializer("1.0", (api) => {
 
     <template>
       <div class={{this.dockClass}} {{didInsert this.setup}}>
+        {{#if this.editPost}}<MessageEdit @post={{this.editPost}} @onClose={{this.closeEdit}} />{{/if}}
+        <div class="wx-reply-normal" hidden={{this.editPost}}>
         {{#if this.error}}<div class="wx-send-error" role="alert">{{this.error}}</div>{{/if}}
         {{#if this.notice}}<div class="wx-send-notice" role="status">{{this.notice}}</div>{{/if}}
         {{#if this.canReply}}
@@ -902,6 +999,7 @@ export default apiInitializer("1.0", (api) => {
           </DockedComposer>
           {{/each}}
         {{else}}<span class="wx-closed">这个话题暂时不能回复</span>{{/if}}
+        </div>
       </div>
     </template>
   }
@@ -983,8 +1081,11 @@ export default apiInitializer("1.0", (api) => {
       if (this.wxSuppressesToolbar(cooked)) await this.hideToolbar();
     }
   });
-  api.registerValueTransformer("post-menu-buttons", ({ context }) => {
+  api.registerValueTransformer("post-menu-buttons", ({ value, context }) => {
     if (context.state.nestedReplyView || !/^\/t\//.test(api.container.lookup("service:router").currentURL || "")) return;
+    value.delete(context.buttonKeys.COPY_LINK);
+    value.delete(context.buttonKeys.BOOKMARK);
+    value.delete(context.buttonKeys.SHARE);
     // Only presentation changes: the core still decides which actions exist,
     // whether they are enabled, and what confirmation or login they require.
     for (const key of Object.values(context.buttonKeys)) {
