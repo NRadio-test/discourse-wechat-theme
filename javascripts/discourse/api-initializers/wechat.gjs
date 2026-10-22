@@ -238,6 +238,7 @@ export default apiInitializer("1.0", (api) => {
     suppressClickUntil = 0;
     lastPointerType = "mouse";
     touchGestureMoved = false;
+    menuRevision = 0;
     interactiveSelector = "button, input, textarea, select, video, audio, iframe, [contenteditable]";
     nestedPopupSelector = ".fk-d-menu, .fk-d-menu-modal, .d-modal, .modal-inner-container, .emoji-picker";
 
@@ -254,6 +255,7 @@ export default apiInitializer("1.0", (api) => {
     get triggerHidden() { return !this.ready; }
     get canCopy() { return !!(this.bubble?.innerText || this.bubble?.textContent || "").trim(); }
     get copying() { return this.copyState === "copying"; }
+    get copied() { return this.copyState === "copied"; }
     get copyLabel() { return this.copyState === "copied" ? "已复制" : this.copying ? "复制中…" : "复制"; }
     get copyError() { return this.copyState === "failed"; }
 
@@ -274,6 +276,7 @@ export default apiInitializer("1.0", (api) => {
       this.postElement.addEventListener("contextmenu", this.contextMenu);
       this.postElement.addEventListener("keydown", this.postKeyDown);
       this.postElement.addEventListener("click", this.suppressHeldClick, true);
+      this.postElement.addEventListener("selectstart", this.selectionStart);
       this.ready = true;
     }
 
@@ -292,6 +295,7 @@ export default apiInitializer("1.0", (api) => {
       this.postElement?.removeEventListener("contextmenu", this.contextMenu);
       this.postElement?.removeEventListener("keydown", this.postKeyDown);
       this.postElement?.removeEventListener("click", this.suppressHeldClick, true);
+      this.postElement?.removeEventListener("selectstart", this.selectionStart);
       this.element = this.postElement = this.bubble = this.menu = null;
       if (!this.isDestroying && !this.isDestroyed) this.ready = false;
     }
@@ -316,7 +320,26 @@ export default apiInitializer("1.0", (api) => {
     }
 
     clearBubbleSelection() {
-      if (this.hasSelectedText()) window.getSelection()?.removeAllRanges();
+      const selection = window.getSelection?.();
+      // A collapsed range or whitespace can still leave native selection
+      // handles. Only clear ranges belonging to this message or its menu.
+      if (selection && [selection.anchorNode, selection.focusNode].some((node) =>
+        node && (this.bubble?.contains(node) || this.menu?.contains(node)) &&
+        !(node.nodeType === 3 ? node.parentElement : node).closest?.("input, textarea, [contenteditable]"))) {
+        selection.removeAllRanges();
+      }
+    }
+
+    @action selectionStart(event) {
+      if (this.isSelecting || !["touch", "pen"].includes(this.lastPointerType)) return;
+      if (this.eligibleTarget(event.target) || this.menu?.contains(event.target)) event.preventDefault();
+    }
+
+    @action selectionChanged() {
+      // WebViews can create a range after the hold timer/contextmenu callback.
+      // Listen only during our gesture/menu, never during explicit selection.
+      if (!this.isSelecting && (this.press || this.isOpen) &&
+          ["touch", "pen"].includes(this.lastPointerType)) this.clearBubbleSelection();
     }
 
     hasSelectedText() {
@@ -338,6 +361,7 @@ export default apiInitializer("1.0", (api) => {
       this.closeQuoteToolbar();
 
       this.press = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      document.addEventListener("selectionchange", this.selectionChanged);
       document.addEventListener("pointermove", this.pointerMove, { capture: true, passive: true });
       document.addEventListener("pointerup", this.pointerEnd, true);
       document.addEventListener("pointercancel", this.pointerEnd, true);
@@ -370,7 +394,10 @@ export default apiInitializer("1.0", (api) => {
       document.removeEventListener("pointermove", this.pointerMove, true);
       document.removeEventListener("pointerup", this.pointerEnd, true);
       document.removeEventListener("pointercancel", this.pointerEnd, true);
-      if (!this.isOpen) document.removeEventListener("scroll", this.viewportChanged, true);
+      if (!this.isOpen) {
+        document.removeEventListener("scroll", this.viewportChanged, true);
+        document.removeEventListener("selectionchange", this.selectionChanged);
+      }
     }
 
     @action contextMenu(event) {
@@ -421,11 +448,13 @@ export default apiInitializer("1.0", (api) => {
       activeMessageActions?.closeMenu();
       activeMessageActions = this;
       this.isOpen = true;
+      this.menuRevision++;
       this.copyState = "";
       this.postElement.dataset.wxMenuOpen = "true";
       document.addEventListener("pointerdown", this.outsidePointer, true);
       document.addEventListener("keydown", this.documentKeyDown, true);
       document.addEventListener("focusin", this.focusChanged, true);
+      document.addEventListener("selectionchange", this.selectionChanged);
       document.addEventListener("scroll", this.viewportChanged, { capture: true, passive: true });
       window.addEventListener("resize", this.viewportChanged, { passive: true });
       window.visualViewport?.addEventListener("resize", this.viewportChanged, { passive: true });
@@ -462,6 +491,8 @@ export default apiInitializer("1.0", (api) => {
 
     closeMenu(restoreFocus = false) {
       const wasOpen = this.isOpen;
+      this.menuRevision++;
+      if (wasOpen && !this.isSelecting && ["touch", "pen"].includes(this.lastPointerType)) this.clearBubbleSelection();
       if (!this.isDestroying && !this.isDestroyed) this.isOpen = false;
       if (activeMessageActions === this) activeMessageActions = null;
       if (this.positionFrame !== null) window.cancelAnimationFrame(this.positionFrame);
@@ -471,6 +502,7 @@ export default apiInitializer("1.0", (api) => {
       document.removeEventListener("pointerdown", this.outsidePointer, true);
       document.removeEventListener("keydown", this.documentKeyDown, true);
       document.removeEventListener("focusin", this.focusChanged, true);
+      document.removeEventListener("selectionchange", this.selectionChanged);
       document.removeEventListener("scroll", this.viewportChanged, true);
       window.removeEventListener("resize", this.viewportChanged);
       window.visualViewport?.removeEventListener("resize", this.viewportChanged);
@@ -569,15 +601,23 @@ export default apiInitializer("1.0", (api) => {
     }
 
     @action async copyBody() {
-      if (this.copying) return;
+      if (this.copying || !this.isOpen) return;
       const text = (this.bubble?.innerText || this.bubble?.textContent || "").trim();
       if (!text) return;
       this.copyState = "copying";
+      const revision = this.menuRevision;
       try {
         await clipboardCopy(text);
-        if (!this.isDestroying && !this.isDestroyed) this.copyState = "copied";
+        if (!this.isDestroying && !this.isDestroyed && revision === this.menuRevision) {
+          this.copyState = "copied";
+          this.clearBubbleSelection();
+          this.closeMenu();
+        }
       } catch {
-        if (!this.isDestroying && !this.isDestroyed) this.copyState = "failed";
+        if (!this.isDestroying && !this.isDestroyed && revision === this.menuRevision) {
+          this.clearBubbleSelection();
+          this.copyState = "failed";
+        }
       }
     }
 
@@ -595,6 +635,7 @@ export default apiInitializer("1.0", (api) => {
             {{/if}}{{/if}}
             {{#if this.copyError}}<p class="wx-message-copy-error" role="status">复制未完成，可点“选择文字”后复制。</p>{{/if}}
           </div>
+          {{#if this.copied}}<span class="sr-only" role="status">已复制</span>{{/if}}
           {{#if this.isSelecting}}<div class="wx-message-selection-tools" role="status"><span>拖动选取文字，可使用系统复制</span><button type="button" {{on "click" this.endTextSelection}}>完成</button></div>{{/if}}
         </div>
       {{else}}{{yield}}{{/if}}

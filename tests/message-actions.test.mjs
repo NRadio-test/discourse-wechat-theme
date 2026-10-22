@@ -325,10 +325,108 @@ test("copy body delegates to the native clipboard helper and reports permission 
   await instance.copyBody();
   assert.deepEqual(h.copied, ["消息正文\n第二段"]);
   assert.equal(instance.copyLabel, "已复制");
+  assert.equal(instance.isOpen, false);
+  instance.openMenu();
   h.failCopy();
   await instance.copyBody();
   assert.equal(instance.copyError, true);
   assert.equal(instance.copying, false);
+  assert.equal(instance.isOpen, true, "a failed copy keeps the selection fallback accessible");
+});
+
+test("touch menus clear late collapsed, whitespace and menu selections", () => {
+  const h = harness(), { instance, text, menu } = h.create();
+  instance.pointerDown(h.pointer(text));
+  for (const node of [text, menu]) {
+    Object.assign(h.selection, { anchorNode: node, focusNode: node, isCollapsed: true, text: "" });
+    h.document.emit("selectionchange", {});
+    assert.equal(h.selection.anchorNode, null);
+  }
+  h.advance(480);
+  Object.assign(h.selection, { anchorNode: text, focusNode: text, isCollapsed: false, text: "  " });
+  h.document.emit("selectionchange", {});
+  assert.equal(h.selection.anchorNode, null);
+  assert.equal(instance.isOpen, true);
+  instance.closeMenu();
+  assert.equal(h.document.count(), 0);
+});
+
+test("native selection starts are cancelled only for touch message/menu controls", () => {
+  const h = harness({ coarsePointer: true }), { instance, text, reply, bubble } = h.create();
+  for (const target of [text, reply]) {
+    const event = h.key(target);
+    instance.selectionStart(event);
+    assert.equal(event.prevented, true);
+  }
+  const input = h.key(new h.Element("textarea", [], bubble));
+  instance.selectionStart(input);
+  assert.equal(input.prevented, false);
+  instance.selectText();
+  const explicit = h.key(text);
+  instance.selectionStart(explicit);
+  assert.equal(explicit.prevented, false);
+  instance.endTextSelection();
+  instance.setPointerMode("mouse");
+  const desktop = h.key(text);
+  instance.selectionStart(desktop);
+  assert.equal(desktop.prevented, false);
+});
+
+test("selection guard preserves outside text, editable fields and explicit selection", () => {
+  const h = harness({ coarsePointer: true }), { instance, bubble } = h.create();
+  instance.openMenu();
+  for (const node of [new h.Element("p"), new h.Element("textarea", [], bubble)]) {
+    h.selectText(node);
+    h.document.emit("selectionchange", {});
+    assert.equal(h.selection.anchorNode, node);
+  }
+  instance.selectText();
+  h.document.emit("selectionchange", {});
+  assert.equal(h.selection.anchorNode, bubble);
+  assert.equal(instance.isSelecting, true);
+});
+
+test("copy success clears even a collapsed range and dismisses its menu", async () => {
+  const h = harness({ coarsePointer: true }), { instance, text } = h.create();
+  instance.openMenu();
+  Object.assign(h.selection, { anchorNode: text, focusNode: text, isCollapsed: true });
+  await instance.copyBody();
+  assert.equal(h.selection.anchorNode, null);
+  assert.equal(instance.isOpen, false);
+  assert.equal(h.document.count(), 0);
+});
+
+test("a delayed copy cannot close a reopened menu or remove explicit selection", async () => {
+  const h = harness({ coarsePointer: true }), { instance, bubble } = h.create();
+  instance.openMenu();
+  const first = instance.copyBody();
+  instance.closeMenu();
+  instance.openMenu();
+  await first;
+  assert.equal(instance.isOpen, true);
+  assert.equal(instance.copyState, "");
+  const second = instance.copyBody();
+  instance.selectText();
+  await second;
+  assert.equal(instance.isSelecting, true);
+  assert.equal(h.selection.anchorNode, bubble);
+});
+
+test("cancelled gestures release their selection listener; destruction ignores pending copies", async () => {
+  const h = harness(), { instance, text } = h.create();
+  instance.pointerDown(h.pointer(text));
+  instance.pointerMove(h.pointer(text, { clientY: 400 }));
+  assert.equal(h.document.count(), 0);
+  h.selectText(text);
+  h.document.emit("selectionchange", {});
+  assert.equal(h.selection.anchorNode, text);
+  instance.openMenu();
+  const copying = instance.copyBody();
+  instance.cleanup();
+  await copying;
+  assert.equal(h.document.count(), 0);
+  assert.equal(h.timers.size, 0);
+  assert.equal(instance.isOpen, false);
 });
 
 
