@@ -66,6 +66,16 @@ test("consolidation keeps notifications, private messages and review queue with 
   assert.equal(menu.bottomTabs[0].position, 3);
 });
 
+test("external links to retired preference tabs land on notifications without changing settings", () => {
+  const h = harness();
+  for (const name of ["interface", "tracking", "navigation-menu", "calendar-subscriptions"]) {
+    const route = new h.classes[`route:preferences.${name}`](); route.router = h.router;
+    route.modelFor = (routeName) => { assert.equal(routeName, "user"); return user; };
+    route.beforeModel();
+  }
+  assert.deepEqual(h.redirects, Array(4).fill(["preferences.notifications", user]));
+});
+
 test("cached core tabs and profile panel are restored on admin routes, including return trips", () => {
   const h = harness(), menu = new h.classes["component:user-menu/menu"]();
   menu.topTabs; menu.bottomTabs;

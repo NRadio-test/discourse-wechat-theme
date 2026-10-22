@@ -98,6 +98,13 @@ export default apiInitializer("1.0", (api) => {
   api.modifyClass("route:user.index", (Superclass) => class extends Superclass {
     beforeModel() { return this.router.replaceWith("user.summary", this.modelFor("user")); }
   });
+  // Old links can also arrive from a login provider or browser bookmarks.
+  // The restricted preferences parent still authorizes the account first.
+  for (const route of ["interface", "tracking", "navigation-menu", "calendar-subscriptions"]) {
+    api.modifyClass(`route:preferences.${route}`, (Superclass) => class extends Superclass {
+      beforeModel() { return this.router.replaceWith("preferences.notifications", this.modelFor("user")); }
+    });
+  }
   const nativePanels = new WeakMap();
   api.modifyClass("component:user-menu/menu", (Superclass) => class extends Superclass {
     get nativeAccountMenu() {
