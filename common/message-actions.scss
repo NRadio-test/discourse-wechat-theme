@@ -33,7 +33,7 @@ body.wx-forum.wx-topic {
   // The quote toolbar is portalled outside the post. During a mode switch an
   // already-running core fast-edit check may resolve for one render; its exact
   // toolbar stays hidden until our component hook closes that stale instance.
-  &:has(.topic-post[data-wx-menu-open="true"][data-wx-pointer-mode="touch"], .topic-post[data-wx-selecting="true"]) .fk-d-menu:has(.quote-button) {
+  .fk-d-menu:has(.quote-button) {
     visibility: hidden;
     pointer-events: none;
   }

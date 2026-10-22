@@ -626,13 +626,18 @@ function quoteHarness() {
   return { ...h, ...post, hook: new Hook(), finishFastEdit: () => resolveFastEdit() };
 }
 
-test("core quoting toolbar stays available to desktop selection and skips enhanced touch selection", async () => {
+test("chat suppresses the quote toolbar on desktop and touch; unthemed posts keep core behavior", async () => {
   const h = quoteHarness();
+  assert.equal(h.hook.computeCurrentCooked(), undefined);
+  await h.hook.showToolbar(h.bubble);
+  assert.equal(h.hook.shown, false);
+  delete h.post.dataset.wxMessageActions;
   assert.equal(h.hook.computeCurrentCooked(), h.bubble);
   const desktop = h.hook.showToolbar(h.bubble);
   h.finishFastEdit();
   await desktop;
   assert.equal(h.hook.shown, true);
+  h.post.dataset.wxMessageActions = "true";
   h.post.dataset.wxPointerMode = "touch";
   assert.equal(h.hook.computeCurrentCooked(), undefined);
   await h.hook.showToolbar(h.bubble);
@@ -642,25 +647,27 @@ test("core quoting toolbar stays available to desktop selection and skips enhanc
   assert.equal(h.hook.computeCurrentCooked(), undefined);
 });
 
-test("a quote toolbar awaiting fast-edit checks closes if the post switches to touch mode", async () => {
+test("a quote toolbar awaiting fast-edit checks closes when the chat theme mounts", async () => {
   const h = quoteHarness();
+  delete h.post.dataset.wxMessageActions;
   const pending = h.hook.showToolbar(h.bubble);
-  h.post.dataset.wxPointerMode = "touch";
+  h.post.dataset.wxMessageActions = "true";
   h.finishFastEdit();
   await pending;
   assert.equal(h.hook.shown, false);
   assert.equal(h.hook.hidden, 1);
 });
 
-test("only obsolete touch selections absorb core selection errors", async () => {
+test("only obsolete chat selections absorb core selection errors", async () => {
   const h = quoteHarness();
+  delete h.post.dataset.wxMessageActions;
   h.hook.failure = new Error("selection disappeared");
   const stale = h.hook.showToolbar(h.bubble);
-  h.post.dataset.wxSelecting = "true";
+  h.post.dataset.wxMessageActions = "true";
   h.finishFastEdit();
   await stale;
   assert.equal(h.hook.shown, false);
-  delete h.post.dataset.wxSelecting;
+  delete h.post.dataset.wxMessageActions;
   const genuine = h.hook.showToolbar(h.bubble);
   h.finishFastEdit();
   await assert.rejects(genuine, /selection disappeared/);

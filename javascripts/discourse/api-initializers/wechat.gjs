@@ -1056,12 +1056,12 @@ export default apiInitializer("1.0", (api) => {
   });
   api.renderInOutlet("before-main-outlet", Conversations);
   api.renderInOutlet("topic-above-post-stream", ReplyDock);
-  // Only our touch messages use the native text-selection menu by itself.
-  // The core retains its usual quoting toolbar for desktop mouse selection.
+  // Chat messages use system text selection on both desktop and mobile.
+  // Reply/edit actions live in the message menu, never a second quote toolbar.
   api.modifyClass("component:post-text-selection", (Superclass) => class extends Superclass {
     wxSuppressesToolbar(cooked) {
       const post = cooked?.closest(".topic-post");
-      return post?.dataset.wxMessageActions === "true" && (post.dataset.wxPointerMode === "touch" || post.dataset.wxSelecting === "true");
+      return post?.dataset.wxMessageActions === "true";
     }
 
     computeCurrentCooked() {
@@ -1074,7 +1074,7 @@ export default apiInitializer("1.0", (api) => {
       try {
         await super.showToolbar(cooked);
       } catch (error) {
-        // A touch-mode switch can clear a selection while the core awaits its
+        // Theme setup can suppress a selection while the core awaits its
         // fast-edit check. Only swallow that now-obsolete selection request.
         if (!this.wxSuppressesToolbar(cooked)) throw error;
       }
