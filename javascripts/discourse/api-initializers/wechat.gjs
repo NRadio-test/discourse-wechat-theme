@@ -34,6 +34,7 @@ const TABS = [
 function pageKind(url) {
   const path = (url || "/").split("?")[0];
   if (/^\/t\//.test(path)) return "topic";
+  if (/^\/u\/[^/]+(?:\/|$)/.test(path)) return "user";
   if (path === "/" || /^\/top(?:\/|$)/.test(path)) return "top";
   if (path === "/latest") return "all";
   let decoded = path;
@@ -91,6 +92,7 @@ export default apiInitializer("1.0", (api) => {
     get welcomeDescription() { return themeSettings.welcome_description || "选一个感兴趣的话题，加入讨论"; }
     get visible() { return this.kind !== "other"; }
     get isTopic() { return this.kind === "topic"; }
+    get isContentPage() { return ["topic", "user"].includes(this.kind); }
     get backUrl() { return TABS.find((t) => t.key === this.tab).url; }
     get selectedId() {
       const parts = this.path.split("?")[0].split("/");
@@ -129,8 +131,9 @@ export default apiInitializer("1.0", (api) => {
       const kind = this.kind;
       document.body.classList.toggle("wx-forum", kind !== "other");
       document.body.classList.toggle("wx-topic", kind === "topic");
+      document.body.classList.toggle("wx-user", kind === "user");
       document.body.classList.toggle("wx-discovery", ["top", "all", "featured"].includes(kind));
-      if (kind !== "other" && kind !== "topic" && kind !== this.tab) {
+      if (["top", "all", "featured"].includes(kind) && kind !== this.tab) {
         this.tab = kind;
         this.model = null;
         this.load();
@@ -213,7 +216,7 @@ export default apiInitializer("1.0", (api) => {
           </div>
           <div class="wx-list-footer"><span>{{this.footerText}}</span><button type="button" class="wx-new-topic" aria-label="发起新话题" title="发起新话题" {{on "click" this.newTopic}}>＋</button></div>
         </aside>
-        {{#unless this.isTopic}}<section class="wx-welcome" aria-label="选择一个话题"><svg width="74" height="64" viewBox="0 0 74 64" aria-hidden="true"><path d="M37 5C19 5 5 16 5 30c0 8 4 14 11 19l-3 10 13-6c4 1 7 2 11 2 18 0 32-11 32-25S55 5 37 5Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="29" r="3" fill="currentColor"/><circle cx="49" cy="29" r="3" fill="currentColor"/></svg><h1>{{this.welcomeTitle}}</h1><p>{{this.welcomeDescription}}</p><button type="button" {{on "click" this.newTopic}}>发起新话题</button></section>{{/unless}}
+        {{#unless this.isContentPage}}<section class="wx-welcome" aria-label="选择一个话题"><svg width="74" height="64" viewBox="0 0 74 64" aria-hidden="true"><path d="M37 5C19 5 5 16 5 30c0 8 4 14 11 19l-3 10 13-6c4 1 7 2 11 2 18 0 32-11 32-25S55 5 37 5Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="29" r="3" fill="currentColor"/><circle cx="49" cy="29" r="3" fill="currentColor"/></svg><h1>{{this.welcomeTitle}}</h1><p>{{this.welcomeDescription}}</p><button type="button" {{on "click" this.newTopic}}>发起新话题</button></section>{{/unless}}
         <a class="wx-mobile-back" href={{this.backUrl}} aria-label="返回话题列表" {{on "click" this.navigate}}>‹</a>
       {{/if}}
     </template>

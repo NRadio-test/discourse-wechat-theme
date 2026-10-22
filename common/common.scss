@@ -1239,3 +1239,80 @@ body.wx-forum:not(.staff) #user-card {
   .metadata-row, .card-row:has(.badge-section) { display: none; }
   .usercard-controls > li:has(.d-icon-filter) { display: none; }
 }
+
+body.wx-forum {
+  .wx-account-menu { padding: 8px 12px; min-width: 240px; }
+  .wx-account-identity { display: flex; align-items: center; gap: 12px; padding: 12px 4px; font-size: 17px; }
+  .wx-account-identity img { border-radius: 7px; }
+  .wx-account-menu a, .wx-profile-summary a { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 8px; border-bottom: 1px solid #eee; color: #222; font-size: 15px; }
+  .wx-account-menu a span, .wx-profile-summary a span { color: #999; }
+  .wx-account-menu .wx-account-logout { width: 100%; min-height: 44px; margin-top: 12px; background: #f5f5f5; color: #555; border-radius: 6px; }
+  #user-menu-button-bookmarks { display: none; }
+  a[href$="/activity/drafts"], .user-menu .drafts { display: none !important; }
+}
+
+body.wx-user {
+  #main-outlet { padding: 18px 22px 40px; box-sizing: border-box; }
+  #main-outlet > .container { width: 100%; max-width: 960px; margin: 0 auto; }
+  .wx-profile-navigation { max-width: 960px; margin: 0 auto 14px; }
+  .wx-return-topics { display: inline-flex; align-items: center; min-height: 40px; color: #555; }
+  .wx-profile-navigation nav { display: flex; gap: 4px; overflow-x: auto; padding: 6px 0; }
+  .wx-profile-navigation nav a { flex: 0 0 auto; padding: 10px 14px; border-radius: 6px; color: #555; font-size: 14px; }
+  .wx-profile-navigation nav a[aria-current="page"] { background: #dff4e6; color: #138640; }
+  .user-main { max-width: none; margin: 0; }
+  .user-main .about { padding: 16px; margin: 0 0 14px; background: white; border: 0; border-radius: 10px; }
+  .user-main .about .avatar { max-width: 56px; max-height: 56px; border-radius: 8px; }
+  .user-main .about .details { padding: 0; background: transparent; }
+  .user-main .about .secondary, .user-main .about .user-profile-names__secondary, .user-main .about .user-profile-stat, .user-main .about .user-profile-badges { display: none; }
+  .user-main .about .bio { max-width: none; font-size: 14px; }
+  .user-navigation-primary { display: none !important; }
+  // Keep server-provided pending-review and plugin entries reachable.
+  &.user-activity-page .user-navigation-secondary li:is(.user-nav__activity-all, .user-nav__activity-topics, .user-nav__activity-replies, .user-nav__activity-read, .user-nav__activity-drafts, .user-nav__activity-likes, .user-nav__activity-bookmarks) { display: none !important; }
+  &.user-activity-page .user-navigation-secondary:not(:has(.user-nav__activity-pending)):not(:has(.user-activity-bottom)) { display: none !important; }
+  &.user-notifications-page .user-navigation-secondary .horizontal-overflow-nav { display: none; }
+  &.user-notifications-page .navigation-controls { margin: 0 0 12px auto; }
+  .user-main .about .user-profile-toggle-btn { display: none; }
+  .user-main .about, .user-main .about .details, .user-main .about .primary, .user-main .about .primary-textual { min-width: 0; width: auto; max-width: 100%; box-sizing: border-box; }
+  .user-main .about .user-profile-avatar { margin-right: 12px; width: 56px; }
+  .user-main .about .full-name { font-size: 20px; }
+  .user-navigation-secondary .nav-pills { gap: 4px; }
+  .user-navigation-secondary .nav-pills > li > a { padding: 10px 14px; border: 0; border-radius: 6px; font-size: 14px; }
+  .user-navigation-secondary .nav-pills > li > a.active { background: #dff4e6; color: #138640; }
+  .user-navigation-secondary .nav-pills .d-icon { display: none; }
+  .new-user-wrapper { display: block; }
+  .new-user-content-wrapper { width: 100%; padding: 0; }
+  .user-content { box-sizing: border-box; padding: 16px; border: 0; border-radius: 10px; background: #fff; margin: 0; }
+  &.user-summary-page .user-content:has(.wx-profile-summary) > :not(.wx-profile-summary):not(:has(.wx-profile-summary)) { display: none; }
+  .wx-profile-summary { display: grid; gap: 0; }
+  .wx-profile-summary p { font-size: 13px; color: #777; margin: 0 0 12px; }
+  .user-content .category, .user-content .badge-category__wrapper, .user-content .discourse-tags, .user-content .topic-status.--bookmarked { display: none !important; }
+  .user-content .topic-list { margin: 0; }
+  .user-content .topic-list .title { color: #222 !important; font-size: 15px; }
+  .user-content .topic-list .avatar { border-radius: 7px; }
+  .user-content .topic-list th.views, .user-content .topic-list td.views { display: none; }
+  .user-stream .user-stream-item { border-bottom: 1px solid #eee; padding: 14px 4px; }
+  .user-stream .user-stream-item .excerpt { font-size: 14px; }
+  .user-content .empty-state { min-height: 120px; padding: 20px; }
+  .user-content .empty-state__title { font-size: 17px; }
+  .user-content .empty-state__body { font-size: 14px; }
+  .user-nav__preferences-emails, .user-nav__preferences-tracking, .user-nav__preferences-interface, .user-nav__preferences-navigation-menu, .user-nav__preferences-calendar-subscriptions { display: none !important; }
+  .user-preferences .control-group { max-width: 100%; }
+
+  .btn-primary { background: #07a54f; color: #fff; border-radius: 6px; }
+}
+
+@media (max-width: 899px) {
+  body.wx-user {
+    .wx-conversations { display: none; }
+    #main-outlet { margin: 0; padding: 8px 12px 24px; }
+    .wx-profile-navigation nav { gap: 0; }
+    .wx-profile-navigation nav a { flex: 1; padding: 10px 2px; font-size: 13px; text-align: center; white-space: nowrap; }
+    .user-main .about { padding: 12px; }
+    .user-content { padding: 12px; }
+    .user-navigation-secondary { overflow-x: auto; margin-bottom: 10px; }
+    .user-navigation-secondary .nav-pills { display: flex; flex-wrap: nowrap; }
+    .user-navigation-secondary .nav-pills > li { flex: 0 0 auto; }
+    .user-stream .user-stream-item { padding: 12px 0; }
+    .user-preferences input, .user-preferences textarea { max-width: 100%; box-sizing: border-box; }
+  }
+}

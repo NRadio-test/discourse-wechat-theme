@@ -6,7 +6,7 @@ if (args.some((arg) => arg !== "--check")) {
   console.error("Usage: node scripts/build-css.mjs [--check]");
   process.exitCode = 2;
 } else {
-  const parts = ["shell", "chat", "inline-chat", "message-actions", "topic-groups", "profile-card"];
+  const parts = ["shell", "chat", "inline-chat", "message-actions", "topic-groups", "profile-card", "account"];
   const directory = new URL("../common/", import.meta.url);
   const target = new URL("common.scss", directory);
   try {
