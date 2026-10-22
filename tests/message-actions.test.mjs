@@ -352,7 +352,7 @@ test("touch menus clear late collapsed, whitespace and menu selections", () => {
 });
 
 test("native selection starts are cancelled only for touch message/menu controls", () => {
-  const h = harness({ coarsePointer: true }), { instance, text, reply, bubble } = h.create();
+  const h = harness({ coarsePointer: true }), { instance, text, reply, bubble, menu } = h.create();
   for (const target of [text, reply]) {
     const event = h.key(target);
     instance.selectionStart(event);
@@ -361,6 +361,12 @@ test("native selection starts are cancelled only for touch message/menu controls
   const input = h.key(new h.Element("textarea", [], bubble));
   instance.selectionStart(input);
   assert.equal(input.prevented, false);
+  const menuInput = h.key(new h.Element("input", [], menu));
+  instance.selectionStart(menuInput);
+  assert.equal(menuInput.prevented, false);
+  const textNode = h.key({ nodeType: 3, parentElement: text });
+  instance.selectionStart(textNode);
+  assert.equal(textNode.prevented, true);
   instance.selectText();
   const explicit = h.key(text);
   instance.selectionStart(explicit);

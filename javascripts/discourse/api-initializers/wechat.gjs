@@ -314,7 +314,7 @@ export default apiInitializer("1.0", (api) => {
 
     closeQuoteToolbar() {
       // The core owns this floating menu. Close its exact identifier rather
-      // than hiding unrelated menus or intercepting document selection events.
+      // than hiding unrelated menus.
       api.container.lookup("service:menu").close("post-text-selection-toolbar");
       api.container.lookup("controller:topic").quoteState?.clear();
     }
@@ -332,7 +332,9 @@ export default apiInitializer("1.0", (api) => {
 
     @action selectionStart(event) {
       if (this.isSelecting || !["touch", "pen"].includes(this.lastPointerType)) return;
-      if (this.eligibleTarget(event.target) || this.menu?.contains(event.target)) event.preventDefault();
+      const target = event.target?.nodeType === 3 ? event.target.parentElement : event.target;
+      if (target?.closest?.("input, textarea, [contenteditable]")) return;
+      if (this.eligibleTarget(target) || this.menu?.contains(target)) event.preventDefault();
     }
 
     @action selectionChanged() {

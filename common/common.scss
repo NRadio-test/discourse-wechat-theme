@@ -854,6 +854,11 @@ body.wx-forum.wx-topic {
     user-select: none;
     -webkit-touch-callout: none;
   }
+  .wx-message-actions-popover :is(input, textarea, [contenteditable], [contenteditable] *) {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
   // No touch-action override and no touchstart preventDefault: page scrolling,
   // pinch zoom and short link/image taps remain browser gestures.
   .topic-post[data-wx-message-actions="true"][data-wx-pointer-mode="touch"]:not([data-wx-selecting="true"]) .cooked {
