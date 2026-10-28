@@ -121,7 +121,6 @@ class ProfileSummary extends Component {
   <template>
     {{#if this.visible}}<section class="wx-profile-summary">
       {{#each this.links as |link|}}<a href={{link.href}} {{on "click" this.navigate}}>{{link.label}}<span aria-hidden="true">›</span></a>{{/each}}
-      {{#if this.own}}<DButton @translatedLabel="退出登录" @action={{routeAction "logout"}} class="wx-account-logout" />{{/if}}
     </section>{{/if}}
   </template>
 }
@@ -175,6 +174,7 @@ class SimpleSettings extends Component {
       {{#if this.message}}<p class={{if this.error "wx-settings-status is-error" "wx-settings-status"}} role="status">{{this.message}}</p>{{/if}}
       <details class="wx-settings-more"><summary>推送与免打扰</summary><div class="wx-setting-detail"><p>浏览器推送</p><PushNotificationSelect @model={{this.user}} /><p class="wx-section-note">仅对当前浏览器生效，微信内可能不支持。</p><UserNotificationSchedule @model={{this.user}} /><button type="button" class="wx-setting-save" disabled={{this.busy}} {{on "click" this.saveSchedule}}>保存免打扰时间</button></div></details>
       <nav class="wx-setting-links" aria-label="其他设置"><a href={{this.usersUrl}} {{on "click" this.navigate}}>屏蔽管理<span aria-hidden="true">›</span></a><a href={{this.securityUrl}} {{on "click" this.navigate}}>登录与安全<span aria-hidden="true">›</span></a><a href={{this.accountUrl}} {{on "click" this.navigate}}>账号资料<span aria-hidden="true">›</span></a></nav>
+      <DButton @translatedLabel="退出登录" @action={{routeAction "logout"}} class="wx-account-logout" />
     </section>{{/if}}
   </template>
 }

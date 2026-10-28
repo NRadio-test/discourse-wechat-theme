@@ -61,7 +61,7 @@ body.wx-user {
   .wx-personal-heading a { font-size: 14px; color: #555; text-decoration: none; }
   .wx-personal-home { justify-self: end; padding: 12px 4px; }
   .wx-section-note { color: #777; font-size: 13px; line-height: 1.6; }
-  .wx-profile-summary .wx-account-logout { margin: 18px 0 4px; min-height: 44px; border: 0; border-radius: 7px; background: #f6f6f6; color: #555; }
+  .wx-settings .wx-account-logout { width: 100%; margin: 24px 0 4px; min-height: 44px; border: 0; border-radius: 7px; background: #f6f6f6; color: #555; }
   .user-preferences { min-width: 0; }
   .user-preferences .instructions { font-size: 13px; line-height: 1.6; color: #777; }
   .user-preferences input:not([type="checkbox"]):not([type="radio"]), .user-preferences select { min-height: 40px; border-radius: 6px; }
