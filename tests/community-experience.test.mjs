@@ -112,3 +112,14 @@ test("new messages never force a history reader to scroll; reaching the end clea
   h.value.scheduleCheck(); h.flush();
   assert.equal(h.value.away, false); assert.equal(h.value.hasNew, false);
 });
+
+const card = fs.readFileSync(new URL("../javascripts/discourse/api-initializers/profile-card.gjs", import.meta.url), "utf8");
+const cardClass = card.slice(card.indexOf("class ProfileActions"), card.indexOf("  <template>")).replace(/^\s*@service[^\n]+/gm, "").replaceAll("@action ", "") + "}";
+test("profile navigation snapshots its destination before the core dismiss clears the user", () => {
+  const visited = [];
+  const Class = new Function("Component", "DiscourseURL", `return ${cardClass}`)(class {}, { routeTo(path) { visited.push(path); } });
+  const view = new Class();
+  view.args = { outletArgs: { user: { path: "/u/example", id: 7 }, close() { this.user = null; } } };
+  view.viewProfile({ preventDefault() {} });
+  assert.deepEqual(visited, ["/u/example/summary"]);
+});
