@@ -8,7 +8,7 @@ const userLinks = new Function(`${source.slice(source.indexOf("function userLink
 const user = { id: 7, path: "/u/member" };
 
 test("public profile links never include another person's private account destinations", () => {
-  assert.deepEqual(userLinks(user, false).map((link) => link.href), ["/u/member/summary", "/u/member/activity/topics", "/u/member/activity/replies"]);
+  assert.deepEqual(userLinks(user, false).map((link) => link.href), ["/u/member/summary", "/u/member/activity/topics"]);
   assert.deepEqual(userLinks(user, true).slice(-2).map((link) => link.href), ["/u/member/notifications", "/u/member/preferences/notifications"]);
   assert.equal(userLinks(null, false).length, 0);
 });
@@ -16,7 +16,7 @@ test("public profile links never include another person's private account destin
 test("hidden and inactive profiles do not expose activity; owners retain their settings", () => {
   for (const state of [{ profile_hidden: true }, { inactive: true }]) {
     assert.deepEqual(userLinks({ ...user, ...state }, false), []);
-    assert.deepEqual(userLinks({ ...user, ...state }, true).map((link) => link.label), ["消息通知", "设置"]);
+    assert.deepEqual(userLinks({ ...user, ...state }, true).map((link) => link.label), ["消息", "设置"]);
   }
 });
 
@@ -31,11 +31,12 @@ function harness() {
   class ProfileNavigation {}
   class ProfileSummary {}
   const api = {
+    onPageChange() {},
     modifyClass(name, decorate) { classes[name] = decorate(name === "component:user-menu/menu" ? BaseMenu : class {}); },
     renderInOutlet(name) { outlets.push(name); },
     container: { lookup(name) { assert.equal(name, "service:router"); return router; } },
   };
-  new Function("apiInitializer", "AccountMenu", "ProfileNavigation", "ProfileSummary", source.slice(source.indexOf("export default apiInitializer")).replace("export default ", ""))((_v, callback) => callback(api), AccountMenu, ProfileNavigation, ProfileSummary);
+  new Function("apiInitializer", "AccountMenu", "ProfileNavigation", "ProfileSummary", "SimpleSettings", source.slice(source.indexOf("export default apiInitializer")).replace("export default ", ""))((_v, callback) => callback(api), AccountMenu, ProfileNavigation, ProfileSummary, class {});
   return { classes, router, redirects, outlets, top, bottom, AccountMenu, originalPanel };
 }
 

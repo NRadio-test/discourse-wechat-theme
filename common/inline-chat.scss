@@ -182,7 +182,11 @@ body.wx-forum.wx-topic {
       }
 
       > .emoji { order: 1; }
-      > .docked-composer-upload { order: 2; }
+      > .docked-composer-upload {
+        order: 2;
+        .d-icon { display: none; }
+        &::before { content: "+"; box-sizing: border-box; width: 23px; height: 23px; border: 2px solid currentColor; border-radius: 50%; font-size: 24px; line-height: 17px; font-weight: 400; }
+      }
     }
 
     .d-editor-button-bar__scroll-btn { display: none; }
