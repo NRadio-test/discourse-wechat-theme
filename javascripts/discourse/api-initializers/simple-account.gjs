@@ -12,6 +12,18 @@ import UserNotificationSchedule from "discourse/components/user-notification-sch
 
 let lastTopicPath = null;
 
+function returnTopicPath(path, userId, store) {
+  if (!path) return "/latest";
+  const [pathname, query] = path.split("?");
+  const parts = pathname.split("/");
+  const idIndex = /^\d+$/.test(parts[2] || "") ? 2 : 3;
+  const id = Number(parts[idIndex]);
+  if (!Number.isSafeInteger(id) || id <= 0) return "/latest";
+  const number = Number(store.get(`wx-read-${userId || "guest"}-${id}`));
+  if (!Number.isSafeInteger(number) || number <= 0) return path;
+  return `${parts.slice(0, idIndex + 1).join("/")}/${number}${query ? `?${query}` : ""}`;
+}
+
 function userLinks(user, own) {
   if (!user?.path) return [];
   const path = user.path;
@@ -50,11 +62,20 @@ class AccountMenu extends Component {
 class ProfileNavigation extends Component {
   @service currentUser;
   @service router;
+  @service keyValueStore;
   get user() { return this.args.outletArgs.model; }
   get own() { return this.currentUser?.id === this.user?.id; }
-  get backUrl() { return lastTopicPath || "/latest"; }
+  get backUrl() {
+    if (this.settingsDetail) return `${this.user.path}/preferences/notifications`;
+    if (this.isSettings || this.isActivity || this.isNotifications) return this.homeUrl;
+    return returnTopicPath(lastTopicPath, this.currentUser?.id, this.keyValueStore);
+  }
+  get backLabel() { return this.settingsDetail ? "‹ 设置" : this.isSettings || this.isActivity || this.isNotifications ? (this.own ? "‹ 我" : "‹ 资料") : "‹ 返回聊天"; }
   get isActivity() { return this.router.currentURL?.includes("/activity/"); }
   get isSettings() { return this.router.currentURL?.includes("/preferences/"); }
+  get settingsDetail() { return /\/preferences\/(users|security)(?:[?#]|$)/.test(this.router.currentURL || ""); }
+  get isNotifications() { return !this.isSettings && this.router.currentURL?.includes("/notifications"); }
+  get showHomeLink() { return this.own && (this.isActivity || this.isSettings || this.isNotifications); }
   get title() {
     const path = this.router.currentURL || "";
     if (path.includes("/preferences/users")) return "屏蔽管理";
@@ -75,10 +96,10 @@ class ProfileNavigation extends Component {
     event.preventDefault(); DiscourseURL.routeTo(event.currentTarget.getAttribute("href"));
   }
   <template>
-    <div class="wx-profile-navigation">
-      <div class="wx-personal-heading"><a class="wx-return-topics" href={{this.backUrl}} {{on "click" this.navigate}}>‹ 返回聊天</a><h1>{{this.title}}</h1>{{#if this.own}}<a class="wx-personal-home" href={{this.homeUrl}} {{on "click" this.navigate}}>我</a>{{/if}}</div>
+    <div class={{if this.settingsDetail "wx-profile-navigation wx-settings-detail-page" "wx-profile-navigation"}}>
+      <div class="wx-personal-heading"><a class="wx-return-topics" href={{this.backUrl}} {{on "click" this.navigate}}>{{this.backLabel}}</a><h1>{{this.title}}</h1>{{#if this.showHomeLink}}<a class="wx-personal-home" href={{this.homeUrl}} {{on "click" this.navigate}}>我</a>{{/if}}</div>
       {{#if this.isActivity}}<nav class="wx-activity-tabs" aria-label="我的话题分类"><a href={{this.topicsUrl}} aria-current={{this.topicsActive}} {{on "click" this.navigate}}>发起的</a><a href={{this.repliesUrl}} aria-current={{this.repliesActive}} {{on "click" this.navigate}}>参与的</a></nav>{{/if}}
-      {{#if this.isSettings}}<p class="wx-section-note">按你的习惯设置，随时可以调整。</p>{{/if}}
+      {{#if this.isSettings}}{{#unless this.settingsDetail}}<p class="wx-section-note">按你的习惯设置，随时可以调整。</p>{{/unless}}{{/if}}
     </div>
   </template>
 }

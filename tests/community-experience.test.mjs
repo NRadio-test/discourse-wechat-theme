@@ -123,3 +123,12 @@ test("profile navigation snapshots its destination before the core dismiss clear
   view.viewProfile({ preventDefault() {} });
   assert.deepEqual(visited, ["/u/example/summary"]);
 });
+
+const returnTopicPath = new Function(`${account.slice(account.indexOf("function returnTopicPath"), account.indexOf("function userLinks"))}; return returnTopicPath;`)();
+test("returning from personal pages restores the last visible message, including numeric topic URLs", () => {
+  const store = { get(key) { assert.equal(key, "wx-read-7-14"); return "23"; } };
+  assert.equal(returnTopicPath("/t/topic/14/1?preview_theme_id=5", 7, store), "/t/topic/14/23?preview_theme_id=5");
+  assert.equal(returnTopicPath("/t/14/1", 7, store), "/t/14/23");
+  assert.equal(returnTopicPath(null, 7, store), "/latest");
+  assert.equal(returnTopicPath("/t/topic/14", 7, { get() { return "NaN"; } }), "/t/topic/14");
+});

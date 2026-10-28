@@ -1354,6 +1354,11 @@ body.wx-user {
   // Keep account/security routes usable; collapse only the redundant navigation.
   &:has(.wx-settings) .user-navigation-secondary { display: none; }
   &:has(.wx-settings) .user-main > .about { display: none; }
+  &:has(.wx-settings-detail-page) {
+    .user-navigation-secondary, .user-main > .about { display: none; }
+    .pref-auth-tokens .auth-token { border-bottom: 1px solid #eee; padding: 14px 0; }
+    .user-preferences .control-label { font-size: 15px; font-weight: 500; }
+  }
 
   .btn-primary { background: #07a54f; color: #fff; border-radius: 6px; }
 }
