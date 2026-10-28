@@ -65,12 +65,15 @@ export default apiInitializer("1.0", (api) => {
     @service store;
     @service currentUser;
     @service appEvents;
+    @service keyValueStore;
     @tracked path = this.router.currentURL || window.location.pathname;
     @tracked tab = "top";
     @tracked model;
     @tracked loading = false;
     @tracked error = false;
     @tracked loadingMore = false;
+    @tracked recentModel;
+    @tracked recentError = false;
     requestNumber = 0;
 
     constructor() {
@@ -102,8 +105,9 @@ export default apiInitializer("1.0", (api) => {
     get canLoadMore() { return this.tab !== "top" && this.model?.canLoadMore; }
     get description() { return this.tab === "top" ? "今天，大家都在聊什么" : this.tab === "all" ? "所有话题，都在这里" : "值得反复看的好内容"; }
     get emptyText() { return this.tab === "top" ? "今天还没有热门讨论" : this.tab === "featured" ? "精选话题会出现在这里" : "还没有话题，来聊第一句吧"; }
+    get showingRecent() { return this.tab === "top" && !this.model?.topics?.length && this.recentModel?.topics?.length > 0; }
     get rows() {
-      let topics = this.model?.topics || [];
+      let topics = this.showingRecent ? this.recentModel.topics.slice(0, 5) : this.model?.topics || [];
       if (this.tab === "top") topics = topics.slice(0, 10);
       return topics.map((topic) => {
         const user = topic.posters?.[0]?.user;
@@ -115,11 +119,14 @@ export default apiInitializer("1.0", (api) => {
         const time = date.toDateString() === now.toDateString()
           ? date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
           : date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+        const saved = Number(this.keyValueStore.get(`wx-read-${this.currentUser?.id || "guest"}-${topic.id}`));
+        const highest = topic.highest_post_number || 1;
+        const resume = Number.isInteger(saved) && saved > 0 && saved <= highest ? saved : topic.last_read_post_number > 0 ? Math.min(topic.last_read_post_number, highest) : 1;
         return {
           id: topic.id, title: topic.title, avatar, time,
           dateTime: date.toISOString(), replies,
           preview: excerpt.slice(0, 90) || `${replies} 条回复${topic.like_count ? ` · ${topic.like_count} 个赞` : ""}`,
-          href: `/t/${topic.slug || "topic"}/${topic.id}/${topic.highest_post_number || 1}`,
+          href: `/t/${topic.slug || "topic"}/${topic.id}/${resume}`,
           selected: topic.id === this.selectedId,
           current: topic.id === this.selectedId ? "page" : undefined,
         };
@@ -147,10 +154,19 @@ export default apiInitializer("1.0", (api) => {
       this.loading = true;
       this.loadingMore = false;
       this.error = false;
+      this.recentModel = null;
+      this.recentError = false;
       const tab = TABS.find((t) => t.key === this.tab);
       try {
         const model = await this.store.findFiltered("topicList", { filter: tab.filter, params: tab.params });
-        if (request === this.requestNumber) this.model = model;
+        if (request !== this.requestNumber) return;
+        this.model = model;
+        if (tab.key === "top" && !model.topics?.length) {
+          try {
+            const recent = await this.store.findFiltered("topicList", { filter: "latest", params: {} });
+            if (request === this.requestNumber) this.recentModel = recent;
+          } catch { if (request === this.requestNumber) this.recentError = true; }
+        }
       } catch {
         if (request === this.requestNumber) this.error = true;
       } finally {
@@ -203,6 +219,8 @@ export default apiInitializer("1.0", (api) => {
             {{#if this.loading}}<p class="wx-list-state" role="status">正在加载话题…</p>{{/if}}
             {{#if this.error}}<div class="wx-list-state wx-list-error" role="alert">话题加载失败<button type="button" {{on "click" this.load}}>重试</button></div>{{/if}}
             {{#unless this.loading}}
+              {{#if this.showingRecent}}<div class="wx-recent-heading"><p>今天还没有热门讨论，先看看大家最近在聊什么。</p><h2>最近在聊</h2></div>{{/if}}
+              {{#if this.recentError}}<p class="wx-list-state" role="status">最近话题暂时未能加载，<a href="/latest" {{on "click" this.navigate}}>查看全部</a></p>{{/if}}
               {{#each this.rows as |row|}}
                 <a href={{row.href}} class={{if row.selected "wx-conversation is-selected" "wx-conversation"}} aria-current={{row.current}} {{on "click" this.navigate}}>
                   <span class="wx-conversation-avatar">{{#if row.avatar}}<img src={{row.avatar}} alt="" loading="lazy" width="48" height="48" />{{else}}<span aria-hidden="true">聊</span>{{/if}}</span>
@@ -212,6 +230,7 @@ export default apiInitializer("1.0", (api) => {
                 {{#unless this.error}}<div class="wx-list-empty"><svg class="wx-empty-mark" width="44" height="40" viewBox="0 0 44 40" aria-hidden="true"><path d="M22 4C11 4 3 11 3 20c0 5 3 9 7 12l-2 5 8-4c2 1 4 1 6 1 11 0 19-6 19-14S33 4 22 4Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="19" r="1.8" fill="currentColor"/><circle cx="29" cy="19" r="1.8" fill="currentColor"/></svg><p>{{this.emptyText}}</p><button type="button" {{on "click" this.newTopic}}>发起话题</button></div>{{/unless}}
               {{/each}}
               {{#if this.canLoadMore}}<button type="button" class="wx-load-more" disabled={{this.loadingMore}} {{on "click" this.more}}>{{if this.loadingMore "正在加载…" "查看更多话题"}}</button>{{/if}}
+              {{#if this.showingRecent}}<a class="wx-recent-more" href="/latest" {{on "click" this.navigate}}>查看全部话题 ›</a>{{/if}}
             {{/unless}}
           </div>
           <div class="wx-list-footer"><span>{{this.footerText}}</span><button type="button" class="wx-new-topic" aria-label="发起新话题" title="发起新话题" {{on "click" this.newTopic}}>＋</button></div>

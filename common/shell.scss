@@ -33,6 +33,10 @@ body.wx-forum {
   .wx-tab.is-active { color: #191919; font-weight: 600; }
   .wx-tab.is-active::after { content: ""; position: absolute; bottom: 0; height: 3px; border-radius: 2px; background: var(--wx-green); width: 20px; left: calc(50% - 10px); }
   .wx-list-description { font-size: 12px; color: #999; margin: 0; padding: 14px 20px 9px; }
+  .wx-recent-heading { padding: 0 20px 8px; }
+  .wx-recent-heading p { color: #888; font-size: 13px; line-height: 1.7; margin: 0 0 16px; }
+  .wx-recent-heading h2 { margin: 0; color: #555; font-size: 14px; font-weight: 500; }
+  .wx-recent-more { display: block; padding: 20px; color: #168b4f; font-size: 14px; text-align: center; }
   .wx-conversation { display: flex; align-items: center; gap: 12px; min-height: 83px; padding: 12px 16px; box-sizing: border-box; color: var(--wx-ink); border-bottom: 1px solid #eeeeee; transition: background 120ms ease; }
   .wx-conversation:hover { background: #eaeaea; color: var(--wx-ink); }
   .wx-conversation.is-selected { background: #d9d9d9; }

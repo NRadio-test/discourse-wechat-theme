@@ -11,8 +11,8 @@ body.wx-forum {
 
 body.wx-user {
   #main-outlet { padding: 18px 22px 40px; box-sizing: border-box; }
-  #main-outlet > .container { width: 100%; max-width: 960px; margin: 0 auto; }
-  .wx-profile-navigation { max-width: 960px; margin: 0 auto 14px; }
+  #main-outlet > .container { width: 100%; max-width: 720px; margin: 0 auto; }
+  .wx-profile-navigation { max-width: 720px; margin: 0 auto 14px; }
   .wx-return-topics { display: inline-flex; align-items: center; min-height: 40px; color: #555; }
   .wx-profile-navigation nav { display: flex; gap: 4px; overflow-x: auto; padding: 6px 0; }
   .wx-profile-navigation nav a { flex: 0 0 auto; padding: 10px 14px; border-radius: 6px; color: #555; font-size: 14px; }
@@ -40,7 +40,7 @@ body.wx-user {
   .new-user-wrapper { display: block; }
   .new-user-content-wrapper { width: 100%; padding: 0; }
   .user-content { box-sizing: border-box; padding: 16px; border: 0; border-radius: 10px; background: #fff; margin: 0; }
-  &.user-summary-page .user-content:has(.wx-profile-summary) > :not(.wx-profile-summary):not(:has(.wx-profile-summary)) { display: none; }
+  &.user-summary-page .user-content:has(.wx-profile-summary) > .top-section { display: none; }
   .wx-profile-summary { display: grid; gap: 0; }
   .wx-profile-summary p { font-size: 13px; color: #777; margin: 0 0 12px; }
   .user-content .category, .user-content .badge-category__wrapper, .user-content .discourse-tags, .user-content .topic-status.--bookmarked { display: none !important; }
@@ -55,6 +55,49 @@ body.wx-user {
   .user-content .empty-state__body { font-size: 14px; }
   .user-nav__preferences-emails, .user-nav__preferences-tracking, .user-nav__preferences-interface, .user-nav__preferences-navigation-menu, .user-nav__preferences-calendar-subscriptions { display: none !important; }
   .user-preferences .control-group { max-width: 100%; }
+
+  .wx-personal-heading { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 48px; }
+  .wx-personal-heading h1 { margin: 0; font-size: 18px; line-height: 1.4; }
+  .wx-personal-heading a { font-size: 14px; color: #555; text-decoration: none; }
+  .wx-personal-home { justify-self: end; padding: 12px 4px; }
+  .wx-section-note { color: #777; font-size: 13px; line-height: 1.6; }
+  .wx-settings .wx-account-logout { width: 100%; margin: 24px 0 4px; min-height: 44px; border: 0; border-radius: 7px; background: #f6f6f6; color: #555; }
+  .user-preferences { min-width: 0; }
+  .user-preferences .instructions { font-size: 13px; line-height: 1.6; color: #777; }
+  .user-preferences input:not([type="checkbox"]):not([type="radio"]), .user-preferences select { min-height: 40px; border-radius: 6px; }
+  .user-preferences .form-vertical { margin: 0; }
+  .user-preferences .form-vertical:has(.wx-settings) > .control-group:is(.notifications, .desktop-notifications, .notification-schedule),
+  .user-preferences .form-vertical:has(.wx-settings) > br { display: none; }
+  // Native save stays available for administrator and third-party fields.
+  .user-preferences .form-vertical:has(.wx-settings):not(:has(.upcoming-changes)):not(:has(.user-custom-controls-outlet > *)) > .save-button { display: none; }
+  .wx-settings h2 { margin: 0; padding: 4px 0 10px; font-size: 14px; font-weight: 500; color: #777; }
+  .wx-setting-row { display: flex; gap: 16px; align-items: center; justify-content: space-between; min-height: 56px; margin: 0; border-bottom: 1px solid #eee; font-size: 15px; font-weight: 400; }
+  .wx-setting-row select { width: auto; min-width: 120px; max-width: 50%; margin: 0; background: #f5f5f5; border: 0; font-size: 14px; color: #555; }
+  .wx-switch { appearance: none; -webkit-appearance: none; flex: 0 0 44px; width: 44px; height: 26px; position: relative; border: 0; border-radius: 20px; margin: 0; background: #ddd; cursor: pointer; }
+  .wx-switch::before { content: ""; position: absolute; width: 22px; height: 22px; border-radius: 50%; background: white; left: 2px; top: 2px; box-shadow: 0 1px 3px #0002; transition: transform .15s; }
+  .wx-switch:checked { background: #07a54f; }
+  .wx-switch:checked::before { transform: translateX(18px); }
+  .wx-switch:disabled { opacity: .5; cursor: wait; }
+  .wx-settings-more { border-bottom: 1px solid #eee; }
+  .wx-settings-more > summary { padding: 18px 0; font-size: 15px; cursor: pointer; }
+  .wx-setting-detail { padding: 0 0 16px; }
+  .wx-setting-detail .notification-schedule { margin: 20px 0 12px; }
+  .wx-setting-save { padding: 10px 14px; border: 0; border-radius: 6px; background: #e6f5eb; color: #168b4f; cursor: pointer; }
+  .wx-setting-links { display: grid; margin-top: 18px; }
+  .wx-setting-links a { display: flex; justify-content: space-between; gap: 12px; padding: 16px 0; border-bottom: 1px solid #eee; color: #222; font-size: 15px; }
+  .wx-setting-links span { color: #999; }
+  .wx-settings-status { font-size: 13px; color: #168b4f; margin: 12px 0; }
+  .wx-settings-status.is-error { color: #b94336; }
+  .wx-settings :is(button, a, input, select, summary):focus-visible { outline: 2px solid #168b4f; outline-offset: 3px; }
+
+  // Keep account/security routes usable; collapse only the redundant navigation.
+  &:has(.wx-settings) .user-navigation-secondary { display: none; }
+  &:has(.wx-settings) .user-main > .about { display: none; }
+  &:has(.wx-settings-detail-page) {
+    .user-navigation-secondary, .user-main > .about { display: none; }
+    .pref-auth-tokens .auth-token { border-bottom: 1px solid #eee; padding: 14px 0; }
+    .user-preferences .control-label { font-size: 15px; font-weight: 500; }
+  }
 
   .btn-primary { background: #07a54f; color: #fff; border-radius: 6px; }
 }
