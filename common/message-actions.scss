@@ -38,22 +38,32 @@ body.wx-forum.wx-topic {
     pointer-events: none;
   }
 
-  .topic-post[data-wx-message-actions="true"] .post-menu-area {
+  .topic-post[data-wx-message-actions="true"] .topic-body > .post__contents {
     position: relative;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .topic-post.post--current-user[data-wx-message-actions="true"] .topic-body > .post__contents {
+    margin-left: auto;
+  }
+
+  .topic-post[data-wx-message-actions="true"] .post-menu-area {
+    position: static;
     min-height: 0;
     margin: 0;
     padding: 0;
   }
 
-  .wx-message-actions.is-enhanced { position: relative; height: 0; }
+  .wx-message-actions.is-enhanced { position: static; height: 0; }
   .wx-message-actions:not(.is-enhanced) > .wx-message-actions-popover { display: contents; }
   .wx-message-actions:not(.is-enhanced) > .wx-message-actions-trigger { display: none; }
 
   .wx-message-actions.is-enhanced > .wx-message-actions-trigger {
     position: absolute;
     z-index: 2;
-    right: 0;
-    top: 2px;
+    left: calc(100% + 6px);
+    right: auto;
+    top: 8px;
     display: grid;
     place-items: center;
     width: 36px;
@@ -78,12 +88,14 @@ body.wx-forum.wx-topic {
     }
   }
 
-  &.staff .wx-message-actions.is-enhanced > .wx-message-actions-trigger { opacity: 1; pointer-events: auto; }
+  .topic-post.post--current-user .wx-message-actions.is-enhanced > .wx-message-actions-trigger {
+    left: auto;
+    right: calc(100% + 6px);
+  }
 
   // Embedded players keep their own controls; provide an unobtrusive message
   // action entry beside them. Links and images use the normal touch hold.
   .topic-post:has(.cooked video, .cooked audio, .cooked iframe) {
-    margin-bottom: 34px;
     .wx-message-actions-trigger { opacity: 1; pointer-events: auto; }
   }
 
