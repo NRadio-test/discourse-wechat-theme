@@ -6,6 +6,7 @@ import { registerDestructor } from "@ember/destroyable";
 import { on } from "@ember/modifier";
 import { fn } from "@ember/helper";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
+import didUpdate from "@ember/render-modifiers/modifiers/did-update";
 import willDestroy from "@ember/render-modifiers/modifiers/will-destroy";
 import DockedComposer from "discourse/components/docked-composer";
 import DButton from "discourse/ui-kit/d-button";
@@ -68,13 +69,14 @@ export default apiInitializer("1.0", (api) => {
     @service keyValueStore;
     @tracked path = this.router.currentURL || window.location.pathname;
     @tracked tab = "top";
-    @tracked model;
-    @tracked loading = false;
-    @tracked error = false;
-    @tracked loadingMore = false;
-    @tracked recentModel;
-    @tracked recentError = false;
-    requestNumber = 0;
+    @tracked lists = {};
+    pendingLists = new Map();
+    scrollPositions = new Map();
+    scrollFrame = null;
+    listElement = null;
+    listsDestroyed = false;
+    preloaded = false;
+    discoveryKind = null;
 
     constructor() {
       super(...arguments);
@@ -82,7 +84,8 @@ export default apiInitializer("1.0", (api) => {
       this.router.on("routeDidChange", this.routeChanged);
       this.appEvents.on("wx:message-sent", this, this.refreshAfterMessage);
       registerDestructor(this, () => {
-        this.requestNumber++;
+        this.listsDestroyed = true;
+        this.unbindList();
         this.router.off("routeDidChange", this.routeChanged);
         this.appEvents.off("wx:message-sent", this, this.refreshAfterMessage);
       });
@@ -102,6 +105,15 @@ export default apiInitializer("1.0", (api) => {
       return Number(/^\d+$/.test(parts[2] || "") ? parts[2] : parts[3]);
     }
     get tabs() { return TABS.map((t) => ({ ...t, selected: t.key === this.tab, current: t.key === this.tab ? "page" : undefined })); }
+    get model() { return this.lists[this.tab]?.model; }
+    get loading() {
+      return (!this.model && this.lists[this.tab]?.loading) ||
+        (this.tab === "top" && this.model && !this.model.topics?.length && !this.recentModel && this.lists.all?.loading);
+    }
+    get error() { return this.lists[this.tab]?.error; }
+    get loadingMore() { return this.lists[this.tab]?.loadingMore; }
+    get recentModel() { return this.tab === "top" ? this.lists.all?.model : null; }
+    get recentError() { return this.tab === "top" && this.model && !this.model.topics?.length && this.lists.all?.error; }
     get canLoadMore() { return this.tab !== "top" && this.model?.canLoadMore; }
     get description() { return this.tab === "top" ? "今天，大家都在聊什么" : this.tab === "all" ? "所有话题，都在这里" : "值得反复看的好内容"; }
     get emptyText() { return this.tab === "top" ? "今天还没有热门讨论" : this.tab === "featured" ? "精选话题会出现在这里" : "还没有话题，来聊第一句吧"; }
@@ -140,55 +152,97 @@ export default apiInitializer("1.0", (api) => {
       document.body.classList.toggle("wx-topic", kind === "topic");
       document.body.classList.toggle("wx-user", kind === "user");
       document.body.classList.toggle("wx-discovery", ["top", "all", "featured"].includes(kind));
-      if (["top", "all", "featured"].includes(kind) && kind !== this.tab) {
-        this.tab = kind;
-        this.model = null;
-        this.load();
-      } else if (kind !== "other" && !this.model && !this.loading) {
-        this.load();
+      if (["top", "all", "featured"].includes(kind)) {
+        // Browser Back to the same discovery page restores its local tab too.
+        if (kind !== this.discoveryKind) this.tab = kind;
+        this.discoveryKind = kind;
+      }
+      if (kind !== "other" && !this.preloaded) {
+        this.preloaded = true;
+        // Start the visible list first, then warm the other two independently.
+        this.ensureList(this.tab);
+        TABS.forEach((tab) => this.ensureList(tab.key));
       }
     }
 
-    @action async load() {
-      const request = ++this.requestNumber;
-      this.loading = true;
-      this.loadingMore = false;
-      this.error = false;
-      this.recentModel = null;
-      this.recentError = false;
-      const tab = TABS.find((t) => t.key === this.tab);
-      try {
-        const model = await this.store.findFiltered("topicList", { filter: tab.filter, params: tab.params });
-        if (request !== this.requestNumber) return;
-        this.model = model;
-        if (tab.key === "top" && !model.topics?.length) {
-          try {
-            const recent = await this.store.findFiltered("topicList", { filter: "latest", params: {} });
-            if (request === this.requestNumber) this.recentModel = recent;
-          } catch { if (request === this.requestNumber) this.recentError = true; }
-        }
-      } catch {
-        if (request === this.requestNumber) this.error = true;
-      } finally {
-        if (request === this.requestNumber) this.loading = false;
-      }
+    updateList(key, changes) {
+      if (!this.listsDestroyed) this.lists = { ...this.lists, [key]: { ...this.lists[key], ...changes } };
+    }
+
+    ensureList(key, refresh = false) {
+      if (this.listsDestroyed) return Promise.resolve();
+      if (this.pendingLists.has(key)) return this.pendingLists.get(key);
+      if (this.lists[key]?.model && !refresh) return Promise.resolve(this.lists[key].model);
+      const tab = TABS.find((t) => t.key === key);
+      this.updateList(key, { loading: true, error: false });
+      const pending = Promise.resolve()
+        .then(() => this.store.findFiltered("topicList", { filter: tab.filter, params: { ...tab.params } }))
+        .then((model) => { this.updateList(key, { model, loadingMore: false }); return model; })
+        .catch(() => { this.updateList(key, { error: true }); })
+        .finally(() => {
+          this.pendingLists.delete(key);
+          this.updateList(key, { loading: false });
+        });
+      this.pendingLists.set(key, pending);
+      return pending;
+    }
+
+    @action load() {
+      // Refresh in place, retaining cached rows until replacements are ready.
+      return Promise.all(TABS.map((tab) => this.ensureList(tab.key, true)));
     }
 
     @action async more() {
       if (this.loadingMore || !this.canLoadMore) return;
+      const key = this.tab;
       const model = this.model;
-      const request = this.requestNumber;
-      this.loadingMore = true;
+      this.updateList(key, { loadingMore: true, error: false });
       try { await model.loadMore(); } catch {
         model.set("loadingMore", false);
-        if (request === this.requestNumber && model === this.model) this.error = true;
+        if (model === this.lists[key]?.model) this.updateList(key, { error: true });
       } finally {
-        if (request === this.requestNumber && model === this.model) this.loadingMore = false;
+        if (model === this.lists[key]?.model) this.updateList(key, { loadingMore: false });
       }
+    }
+
+    get wideList() { return window.matchMedia("(min-width: 900px)").matches; }
+
+    @action bindList(element) {
+      this.unbindList();
+      this.listElement = element;
+      element.addEventListener("scroll", this.recordScroll, { passive: true });
+      window.addEventListener("scroll", this.recordScroll, { passive: true });
+      this.restoreScroll();
+    }
+
+    @action unbindList() {
+      cancelAnimationFrame(this.scrollFrame);
+      this.scrollFrame = null;
+      this.listElement?.removeEventListener("scroll", this.recordScroll);
+      window.removeEventListener("scroll", this.recordScroll);
+      this.listElement = null;
+    }
+
+    @action recordScroll() {
+      if (!this.listElement || this.scrollFrame !== null || (!this.wideList && this.isContentPage)) return;
+      this.scrollPositions.set(this.tab, this.wideList ? this.listElement.scrollTop : window.scrollY);
+    }
+
+    @action restoreScroll() {
+      cancelAnimationFrame(this.scrollFrame);
+      this.scrollFrame = requestAnimationFrame(() => {
+        this.scrollFrame = null;
+        if (this.listsDestroyed || !this.listElement || (!this.wideList && this.isContentPage)) return;
+        const top = this.scrollPositions.get(this.tab) || 0;
+        if (this.wideList) this.listElement.scrollTop = top;
+        else window.scrollTo({ top, behavior: "instant" });
+      });
     }
 
     @action navigate(event) {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = TABS.find((tab) => tab.url === event.currentTarget.getAttribute("href"));
+      if (target && !this.isContentPage) return this.chooseTab(target, event);
       event.preventDefault();
       DiscourseURL.routeTo(event.currentTarget.getAttribute("href"));
     }
@@ -196,10 +250,13 @@ export default apiInitializer("1.0", (api) => {
     @action chooseTab(tab, event) {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
+      if (this.tab === tab.key && !this.isContentPage) return;
+      this.recordScroll();
       this.tab = tab.key;
-      this.model = null;
-      this.load();
-      if (!this.isTopic) DiscourseURL.routeTo(tab.url);
+      this.ensureList(tab.key);
+      // Discovery tabs are local views. Their hrefs still support direct links
+      // and opening a new tab without invoking hidden core discovery requests.
+      if (this.kind === "user") DiscourseURL.routeTo(tab.url);
     }
 
     @action newTopic() { this.appEvents.trigger("wx:new-topic"); }
@@ -214,7 +271,7 @@ export default apiInitializer("1.0", (api) => {
               <a href={{tab.url}} class={{if tab.selected "wx-tab is-active" "wx-tab"}} aria-current={{tab.current}} {{on "click" (fn this.chooseTab tab)}}>{{tab.label}}</a>
             {{/each}}
           </nav>
-          <div class="wx-list-scroll">
+          <div class="wx-list-scroll" {{didInsert this.bindList}} {{willDestroy this.unbindList}} {{didUpdate this.restoreScroll this.tab this.model this.loading this.isContentPage}}>
             <p class="wx-list-description">{{this.description}}</p>
             {{#if this.loading}}<p class="wx-list-state" role="status">正在加载话题…</p>{{/if}}
             {{#if this.error}}<div class="wx-list-state wx-list-error" role="alert">话题加载失败<button type="button" {{on "click" this.load}}>重试</button></div>{{/if}}
