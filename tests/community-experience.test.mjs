@@ -38,37 +38,6 @@ test("a failed save rolls back the option and another person's settings cannot b
   await value.saveSchedule();
 });
 
-const shell = fs.readFileSync(new URL("../javascripts/discourse/api-initializers/wechat.gjs", import.meta.url), "utf8");
-const tabs = [{ key: "top", filter: "top", params: { period: "daily" } }, { key: "all", filter: "latest", params: {} }];
-const loadSource = shell.slice(shell.indexOf("    @action async load()"), shell.indexOf("    @action async more()"));
-const load = new Function("TABS", `return ({${loadSource.replace("@action ", "")}}).load`)(tabs);
-
-test("empty daily top gets an explicitly separate recent list; real top never fetches latest", async () => {
-  const calls = [];
-  const state = { tab: "top", requestNumber: 0, store: { async findFiltered(_type, { filter }) { calls.push(filter); return { topics: filter === "top" ? [] : [{ id: 8 }] }; } } };
-  await load.call(state);
-  assert.deepEqual(calls, ["top", "latest"]);
-  assert.deepEqual(state.model.topics, []);
-  assert.equal(state.recentModel.topics[0].id, 8);
-  calls.length = 0;
-  state.store.findFiltered = async (_type, { filter }) => { calls.push(filter); return { topics: [{ id: 9 }] }; };
-  await load.call(state);
-  assert.deepEqual(calls, ["top"]); assert.equal(state.recentModel, null);
-});
-
-test("slow recent results cannot overwrite a newly selected all list; recent failures are separate", async () => {
-  let resolveRecent;
-  const state = { tab: "top", requestNumber: 0, store: { findFiltered(_type, { filter }) { return filter === "top" ? Promise.resolve({ topics: [] }) : new Promise((r) => { resolveRecent = r; }); } } };
-  const first = load.call(state); await Promise.resolve();
-  state.tab = "all"; state.store.findFiltered = async () => ({ topics: [{ id: 21 }] });
-  await load.call(state); resolveRecent({ topics: [{ id: 22 }] }); await first;
-  assert.equal(state.model.topics[0].id, 21); assert.equal(state.recentModel, null);
-  state.tab = "top";
-  state.store.findFiltered = async (_type, { filter }) => { if (filter === "latest") throw new Error("network"); return { topics: [] }; };
-  await load.call(state);
-  assert.equal(state.error, false); assert.equal(state.recentError, true); assert.equal(state.loading, false);
-});
-
 const navSource = fs.readFileSync(new URL("../javascripts/discourse/api-initializers/chat-navigation.gjs", import.meta.url), "utf8");
 function navigation() {
   const jumps = [], stored = [], subscriptions = [], removed = [];

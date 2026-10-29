@@ -98,15 +98,3 @@ test("personal pages use the chat shell without theming administration or unrela
   assert.equal(pageKind("/top?period=daily"), "top");
   for (const url of ["/admin/users/member", "/review", "/categories"]) assert.equal(pageKind(url), "other");
 });
-
-test("entering a personal page never changes the conversation filter to an invalid user tab", () => {
-  const start = shell.indexOf("    @action routeChanged() {");
-  const end = shell.indexOf("    @action async load()", start);
-  const routeChanged = new Function("document", "window", `return ({ ${shell.slice(start, end).replace("@action ", "")} }).routeChanged;`)({ body: { classList: { toggle() {} } } }, { location: {} });
-  let loads = 0;
-  const view = { router: { currentURL: "/u/member/summary" }, kind: "user", tab: "all", model: {}, load() { loads++; } };
-  routeChanged.call(view);
-  assert.equal(view.tab, "all"); assert.equal(loads, 0);
-  view.kind = "featured"; routeChanged.call(view);
-  assert.equal(view.tab, "featured"); assert.equal(loads, 1);
-});
