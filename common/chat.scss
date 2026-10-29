@@ -96,7 +96,8 @@ body.wx-forum.wx-topic {
       flex: 0 1 auto;
       box-sizing: border-box;
       width: max-content;
-      max-width: min(680px, calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap) - 28px));
+      // Reserve room beside the bubble for its 36px menu trigger and 6px gap.
+      max-width: min(680px, calc(100% - var(--wx-chat-avatar-size) - var(--wx-chat-avatar-gap) - 44px));
       min-width: 0;
       padding: 0;
       margin: 0;
