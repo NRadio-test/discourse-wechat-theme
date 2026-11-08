@@ -101,3 +101,18 @@ test("returning from personal pages restores the last visible message, including
   assert.equal(returnTopicPath(null, 7, store), "/latest");
   assert.equal(returnTopicPath("/t/topic/14", 7, { get() { return "NaN"; } }), "/t/topic/14");
 });
+
+test("deep topic jumps retain the chat toolbar and composer while other archetypes keep core behavior", () => {
+  const shell = fs.readFileSync(new URL("../javascripts/discourse/api-initializers/wechat.gjs", import.meta.url), "utf8");
+  const start = shell.indexOf("    get shouldHideScrollableContentAbove()");
+  const end = shell.indexOf("    @action replyToPost", start);
+  class Core { get shouldHideScrollableContentAbove() { return true; } }
+  const Class = new Function("Core", `return class extends Core { ${shell.slice(start, end)} };`)(Core);
+  const controller = new Class();
+  controller.model = { archetype: "regular" };
+  assert.equal(controller.shouldHideScrollableContentAbove, false);
+  controller.model = { archetype: "private_message" };
+  assert.equal(controller.shouldHideScrollableContentAbove, true);
+  controller.model = null;
+  assert.equal(controller.shouldHideScrollableContentAbove, true);
+});
