@@ -624,7 +624,7 @@ export default apiInitializer("1.0", (api) => {
     }
 
     @action viewportChanged(event) {
-      if (event?.target && (this.menu?.contains(event.target) || this.isNestedPopup(event.target))) return;
+      if (event?.target?.nodeType && (this.menu?.contains(event.target) || this.isNestedPopup(event.target))) return;
       this.touchGestureMoved = true;
       this.cancelPress();
       this.closeMenu();
@@ -1085,12 +1085,20 @@ export default apiInitializer("1.0", (api) => {
 
   class ReplyDock extends Component {
     @service currentUser;
+    @service siteSettings;
+    @service appEvents;
     @tracked toolsOpen = false;
     @tracked copied = false;
     get topic() { return this.args.outletArgs.model; }
     get topics() { return this.topic?.archetype === "regular" ? [this.topic] : []; }
     get introductionUrl() { return `/t/${this.topic.slug || "topic"}/${this.topic.id}/1`; }
     get latestUrl() { return `/t/${this.topic.slug || "topic"}/${this.topic.id}/${this.topic.highest_post_number || 1}`; }
+    get highlightsEnabled() { return this.topic?.archetype === "regular" && this.siteSettings.community_highlights_enabled; }
+    @action openHighlights(filter) {
+      if (!this.highlightsEnabled) return;
+      this.toolsOpen = false;
+      this.appEvents.trigger("community-highlights:open", { topic: this.topic, filter });
+    }
     @action introduction(event) {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
@@ -1111,7 +1119,17 @@ export default apiInitializer("1.0", (api) => {
     }
     <template>
       <div class="wx-chat-heading"><span role="heading" aria-level="1" title={{this.topic.title}}>{{this.topic.title}}</span><button type="button" aria-label="话题更多操作" aria-expanded={{this.toolsOpen}} {{on "click" this.toggleTools}}>•••</button>
-        {{#if this.toolsOpen}}<nav class="wx-topic-menu" aria-label="话题操作"><a href={{this.introductionUrl}} {{on "click" this.introduction}}>回到开头</a><a href={{this.latestUrl}} {{on "click" this.latest}}>跳到最新</a><button type="button" {{on "click" this.copyTopic}}>{{if this.copied "链接已复制" "分享话题"}}</button></nav>{{/if}}
+        {{#if this.toolsOpen}}
+          <nav class="wx-topic-menu" aria-label="话题操作">
+            <a href={{this.introductionUrl}} {{on "click" this.introduction}}>回到开头</a>
+            <a href={{this.latestUrl}} {{on "click" this.latest}}>跳到最新</a>
+            {{#if this.highlightsEnabled}}
+              <button type="button" {{on "click" (fn this.openHighlights "hot")}}>热评十大</button>
+              <button type="button" {{on "click" (fn this.openHighlights "featured")}}>精选回复</button>
+            {{/if}}
+            <button type="button" {{on "click" this.copyTopic}}>{{if this.copied "链接已复制" "分享话题"}}</button>
+          </nav>
+        {{/if}}
       </div>
       {{#each this.topics key="id" as |topic|}}
         {{#if this.currentUser}}<InlineReply @topic={{topic}} />{{else}}<div class="wx-reply-dock"><button type="button" class="wx-reply-input" {{on "click" this.login}}>登录后参与讨论</button></div>{{/if}}
@@ -1120,6 +1138,11 @@ export default apiInitializer("1.0", (api) => {
   }
 
   api.modifyClass("controller:topic", (Superclass) => class extends Superclass {
+    // Core unloads this outlet after jumping beyond the first chunk. Chat's
+    // fixed title, reply dock and optional highlight navigation must survive.
+    get shouldHideScrollableContentAbove() {
+      return this.model?.archetype === "regular" ? false : super.shouldHideScrollableContentAbove;
+    }
     @action replyToPost(post) {
       const topic = post ? post.get("topic") : this.model;
       const composer = this.composer?.model;

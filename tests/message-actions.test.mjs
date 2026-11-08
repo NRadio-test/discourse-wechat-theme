@@ -69,6 +69,7 @@ function harness({ coarsePointer = false } = {}) {
 
   class Element {
     constructor(tag, classes = [], parent = null) {
+      this.nodeType = 1;
       this.tagName = tag.toUpperCase();
       this.classes = new Set(classes);
       this.classList = { add: (...names) => names.forEach((name) => this.classes.add(name)), remove: (...names) => names.forEach((name) => this.classes.delete(name)), contains: (name) => this.classes.has(name) };
@@ -270,6 +271,20 @@ test("nested native menus retain their anchor and internal scrolling remains usa
   h.document.emit("pointerdown", { target: child });
   h.document.emit("scroll", { target: menu });
   assert.equal(instance.isOpen, true);
+});
+
+test("window and visual viewport resizing close an open menu without testing a non-Node target", () => {
+  const h = harness(), { instance, menu } = h.create();
+  const contains = menu.contains.bind(menu);
+  menu.contains = (target) => {
+    assert.ok(target.nodeType, "Node.contains requires a DOM node");
+    return contains(target);
+  };
+  for (const target of [h.window, h.window.visualViewport]) {
+    instance.openMenu();
+    instance.viewportChanged({ type: "resize", target });
+    assert.equal(instance.isOpen, false);
+  }
 });
 
 test("reply action closes the shell after dispatch without preventing the native action", () => {
